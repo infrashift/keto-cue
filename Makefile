@@ -27,7 +27,7 @@ PRETTIER_VERSION=$(shell cat package.json | jq -r '.devDependencies["prettier"] 
 
 .PHONY: format
 format: .bin/ory
-	.bin/ory dev headers copyright --type=open-source --exclude=.bin --exclude=internal/httpclient --exclude=proto --exclude=oryx
+	.bin/ory dev headers copyright --type=open-source --exclude=.bin --exclude=docs --exclude=scripts/ste-check.py --exclude=internal/httpclient --exclude=proto --exclude=oryx
 	go tool goimports -w -local github.com/ory/keto *.go internal cmd contrib ketoctx ketoapi embedx
 	@echo "Prettier Version: $(PRETTIER_VERSION)"
 	npx --package=prettier@$(PRETTIER_VERSION)  prettier . --write
@@ -120,12 +120,12 @@ test-docs-samples:
 
 .PHONY: fuzz-test
 fuzz-test:
-	go test -fuzz=FuzzParser -fuzztime=10s ./internal/schema
+	go test -fuzz=FuzzParseCUE -fuzztime=10s ./schema
 
 .PHONY: libfuzzer-fuzz-test
 libfuzzer-fuzz-test: .bin/go114-fuzz-build
 	mkdir -p .fuzzer/fuzz_parser_corpus
-	.bin/go114-fuzz-build -o ./.fuzzer/parser.a -func LibfuzzerFuzzParser ./internal/schema
+	.bin/go114-fuzz-build -o ./.fuzzer/parser.a -func LibfuzzerFuzzParser ./schema
 	clang -fsanitize=fuzzer ./.fuzzer/parser.a -o ./.fuzzer/parser
 	./.fuzzer/parser -use_value_profile=1 -timeout=1 ./.fuzzer/fuzz_parser_corpus ./.fuzzer/fuzz_parser_seeds
 
@@ -134,7 +134,7 @@ libfuzzer-fuzz-test-minimize: .bin/go114-fuzz-build
 	mkdir -p .fuzzer/fuzz_parser_corpus
 	mv .fuzzer/fuzz_parser_corpus .fuzzer/fuzz_parser_old_corpus
 	mkdir -p .fuzzer/fuzz_parser_corpus
-	.bin/go114-fuzz-build -o ./.fuzzer/parser.a -func LibfuzzerFuzzParser ./internal/schema
+	.bin/go114-fuzz-build -o ./.fuzzer/parser.a -func LibfuzzerFuzzParser ./schema
 	clang -fsanitize=fuzzer ./.fuzzer/parser.a -o ./.fuzzer/parser
 	./.fuzzer/parser -runs=0 -merge=1 ./.fuzzer/fuzz_parser_corpus ./.fuzzer/fuzz_parser_seeds ./.fuzzer/fuzz_parser_old_corpus
 
@@ -163,3 +163,50 @@ licenses: .bin/licenses node_modules  # checks open-source licenses
 node_modules: package-lock.json
 	npm ci
 	touch node_modules
+
+# --- keto-cue gates (see CLAUDE.md) -------------------------------------------
+
+CUE_PKGS = ./schema/... ./internal/namespace/... ./internal/driver/config/... ./cmd/namespace/... ./internal/testhelpers/...
+ENGINE_PKGS = ./internal/check/... ./internal/expand/...
+GOFMT ?= $(shell go env GOROOT)/bin/gofmt
+CUE_DIRS = schema internal/namespace internal/driver/config cmd/namespace internal/testhelpers
+
+.PHONY: lint test-cue wiki docs-style check docs-demo docs-dev docs-build
+
+## lint: check gofmt and run go vet on the keto-cue packages
+lint:
+	@test -z "$$($(GOFMT) -l $(CUE_DIRS) internal/check internal/expand)" || { echo "gofmt needed:"; $(GOFMT) -l $(CUE_DIRS) internal/check internal/expand; exit 1; }
+	go vet $(CUE_PKGS)
+
+## test-cue: run the schema, config and engine tests
+test-cue:
+	go test $(CUE_PKGS) $(ENGINE_PKGS)
+
+## wiki: validate the OKF wiki
+wiki:
+	okfw validate --all
+	okfw validate --okf
+
+## docs-style: check the keto-cue documents against ASD-STE100 rules
+docs-style:
+	python3 -I scripts/ste-check.py
+
+## docs-demo: regenerate the landing-page demo output with keto itself
+KETO_BIN ?= .bin/keto
+docs-demo:
+	go build -o $(KETO_BIN) .
+	cd docs/src/demo && for f in schema.cue typo.cue; do \
+		echo "\$$ keto namespace validate $$f"; \
+		$(CURDIR)/$(KETO_BIN) namespace validate $$f 2>&1 || true; \
+	done > output.txt
+
+## docs-dev: run the Astro Starlight site locally (bun)
+docs-dev:
+	cd docs && bun install && bun --bun run dev
+
+## docs-build: build the site into docs/dist (the same build as the Pages deploy)
+docs-build:
+	cd docs && bun install --frozen-lockfile && bun --bun run build
+
+## check: run all keto-cue gates
+check: lint test-cue wiki docs-style

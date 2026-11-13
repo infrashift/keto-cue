@@ -19,57 +19,69 @@ import (
 
 var rewrites = testhelpers.Scenario{
 	Name: "userset rewrites",
-	Opl: `
-	class User implements Namespace {}
-
-	class Doc implements Namespace {
-		related: {
-			owner: User[]
-			parent: Doc[]
+	Schema: `
+		namespaces: {
+			User: {}
+			Doc: {
+				relations: {
+					owner: types: ["User"]
+					parent: types: ["Doc"]
+				}
+				permissions: {
+					editor: {op: "direct", relation: "owner"}
+					viewer: {
+						op: "or"
+						children: [
+							{op: "direct", relation: "editor"},
+							{op: "tupleToSubjectSet", tupleSetRelation: "parent", computedSubjectSet: "viewer"},
+						]
+					}
+				}
+			}
+			Group: relations: member: types: ["User"]
+			Level: relations: member: types: ["User"]
+			Resource: {
+				relations: {
+					level: types: ["Level"]
+					owner: types: ["Group"]
+				}
+				permissions: {
+					viewer: {op: "tupleToSubjectSet", tupleSetRelation: "owner", computedSubjectSet: "member"}
+					isOwner: {op: "tupleToSubjectSet", tupleSetRelation: "owner", computedSubjectSet: "member"}
+					read: {
+						op: "or"
+						children: [
+							{op: "direct", relation: "viewer"},
+							{op: "direct", relation: "isOwner"},
+						]
+					}
+					update: {op: "direct", relation: "isOwner"}
+					delete: {
+						op: "and"
+						children: [
+							{op: "direct", relation: "isOwner"},
+							{op: "tupleToSubjectSet", tupleSetRelation: "level", computedSubjectSet: "member"},
+						]
+					}
+				}
+			}
+			Acl: {
+				relations: {
+					allow: types: ["User"]
+					deny: types: ["User"]
+				}
+				permissions: access: {
+					op: "and"
+					children: [
+						{op: "direct", relation: "allow"},
+						{
+							op: "invert"
+							child: {op: "direct", relation: "deny"}
+						},
+					]
+				}
+			}
 		}
-		permits = {
-			editor: (ctx: Context) => this.related.owner.includes(ctx.subject),
-			viewer: (ctx: Context) => this.permits.editor(ctx) ||
-				this.related.parent.traverse(p => p.permits.viewer(ctx))
-		}
-	}
-
-	class Group implements Namespace {
-		related: {
-			member: User[]
-		}
-	}
-
-	class Level implements Namespace {
-		related: {
-			member: User[]
-		}
-	}
-
-	class Resource implements Namespace {
-		related: {
-			level: Level[]
-			owner: Group[]
-		}
-		permits = {
-			viewer: (ctx: Context) => this.related.owner.traverse(g => g.related.member.includes(ctx.subject)),
-			isOwner: (ctx: Context) => this.related.owner.traverse(g => g.related.member.includes(ctx.subject)),
-
-			read: (ctx: Context) => this.permits.viewer(ctx) || this.permits.isOwner(ctx),
-			update: (ctx: Context) => this.permits.isOwner(ctx),
-			delete: (ctx: Context) => this.permits.isOwner(ctx) && this.related.level.traverse(l => l.related.member.includes(ctx.subject)),
-		}
-	}
-
-	class Acl implements Namespace {
-		related: {
-			allow: User[]
-			deny: User[]
-		}
-		permits = {
-			access: (ctx: Context) => this.related.allow.includes(ctx.subject) && !this.related.deny.includes(ctx.subject)
-		}
-	}
 	`,
 	InputTuples: []string{
 		// Direct ownership — plain and namespace-qualified subjects both work.

@@ -35,7 +35,7 @@ import (
 
 type testcase struct {
 	name        string
-	opl         string
+	schemaSrc   string
 	inputTuples []string
 	maxDepth    int
 
@@ -49,13 +49,13 @@ func TestTraceEngine(t *testing.T) {
 	t.Parallel()
 
 	tests := []testcase{
-		// ── no-OPL mode ──────────────────────────────────────────────────────────
+		// ── no-schema mode ──────────────────────────────────────────────────────────
 
 		{
 			// Engine finds the tuple immediately via direct lookup.
 			// Expand is registered eagerly, but the Executor already has a decisive
 			// result from the direct match, so the expansion work is skipped.
-			name: "no-OPL: direct hit",
+			name: "no-schema: direct hit",
 			inputTuples: []string{
 				"Group:eng#members@User:1",
 			},
@@ -68,7 +68,7 @@ func TestTraceEngine(t *testing.T) {
 		},
 		{
 			// Engine follows a three-hop SubjectSet chain to find a member.
-			name: "no-OPL: multi-hop SubjectSet expansion",
+			name: "no-schema: multi-hop SubjectSet expansion",
 			inputTuples: []string{
 				"Group:a#members@User:1",
 				"Group:b#members@Group:a#members",
@@ -90,7 +90,7 @@ func TestTraceEngine(t *testing.T) {
 		},
 		{
 			// Engine hits the depth cap at restDepth=0 and returns unknown.
-			name:     "no-OPL: depth limit stops expansion",
+			name:     "no-schema: depth limit stops expansion",
 			maxDepth: 2,
 			inputTuples: []string{
 				"Group:a#members@User:1",
@@ -110,27 +110,21 @@ func TestTraceEngine(t *testing.T) {
 			},
 		},
 
-		// ── strict OPL mode ───────────────────────────────────────────────────────
+		// ── strict schema mode ───────────────────────────────────────────────────────
 
 		{
 			// In strict mode the only type-safe checks are fired;
 			// no useless direct/expand on relations that are "permit";
-			// Subject-set fires only when OPL field declares a SubjectSet<..>;
-			name:   "strict OPL: SubjectSet expand fires only for declared types",
+			// Subject-set fires only when schema field declares a SubjectSet<..>;
+			name:   "strict schema: SubjectSet expand fires only for declared types",
 			strict: true,
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-					}
-				}
-				class File implements Namespace {
-					related: {
-						viewers: SubjectSet<Group, "members">[]
-					}
-					permits = {
-						view: (ctx: Context) => this.related.viewers.includes(ctx.subject)
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: members: types: ["User"]
+					File: {
+						relations: viewers: types: ["Group#members"]
+						permissions: view: {op: "direct", relation: "viewers"}
 					}
 				}
 			`,
@@ -160,25 +154,26 @@ func TestTraceEngine(t *testing.T) {
 			// The OR shortcut batches all plain computed-usersets into a single multiDirect check.
 			// Plain related fields (viewers, viewers2) with no SubjectSet types produce
 			// empty checks because multiDirect already covers them, and sets skipDirect=true.
-			name:   "strict OPL: OR batches computed-usersets, suppresses spurious permit checks",
+			name:   "strict schema: OR batches computed-usersets, suppresses spurious permit checks",
 			strict: true,
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-					}
-				}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						viewers2: User[]
-						viewerGroups: Group[]
-					}
-					permits = {
-						view: (ctx: Context) => this.related.viewers.includes(ctx.subject) ||
-							this.related.viewerGroups.traverse(g => g.related.members.includes(ctx.subject)) ||
-							this.related.viewers2.includes(ctx.subject)
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: members: types: ["User"]
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							viewers2: types: ["User"]
+							viewerGroups: types: ["Group"]
+						}
+						permissions: view: {
+							op: "or"
+							children: [
+								{op: "direct", relation: "viewers"},
+								{op: "tupleToSubjectSet", tupleSetRelation: "viewerGroups", computedSubjectSet: "members"},
+								{op: "direct", relation: "viewers2"},
+							]
+						}
 					}
 				}
 			`,
@@ -214,23 +209,24 @@ func TestTraceEngine(t *testing.T) {
 		},
 		{
 			// Strict OR where the TTU branch finds a member.
-			name:   "strict OPL: OR with TTU finds member",
+			name:   "strict schema: OR with TTU finds member",
 			strict: true,
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-					}
-				}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						viewerGroups: Group[]
-					}
-					permits = {
-						view: (ctx: Context) => this.related.viewers.includes(ctx.subject) ||
-							this.related.viewerGroups.traverse(g => g.related.members.includes(ctx.subject))
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: members: types: ["User"]
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							viewerGroups: types: ["Group"]
+						}
+						permissions: view: {
+							op: "or"
+							children: [
+								{op: "direct", relation: "viewers"},
+								{op: "tupleToSubjectSet", tupleSetRelation: "viewerGroups", computedSubjectSet: "members"},
+							]
+						}
 					}
 				}
 			`,
@@ -263,16 +259,17 @@ func TestTraceEngine(t *testing.T) {
 		},
 		{
 			// NOT inverts an inner member result to not-member.
-			name:   "strict OPL: NOT inverts member to not-member",
+			name:   "strict schema: NOT inverts member to not-member",
 			strict: true,
-			opl: `
-				class User implements Namespace{}
-				class File implements Namespace{
-					related: {
-						blocklist: User[]
-					}
-					permits = {
-						view: (ctx: Context) => !this.related.blocklist.includes(ctx.subject)
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					File: {
+						relations: blocklist: types: ["User"]
+						permissions: view: {
+							op: "invert"
+							child: {op: "direct", relation: "blocklist"}
+						}
 					}
 				}
 			`,
@@ -296,16 +293,17 @@ func TestTraceEngine(t *testing.T) {
 		},
 		{
 			// NOT inverts an inner not-member result to member.
-			name:   "strict OPL: NOT inverts not-member to member",
+			name:   "strict schema: NOT inverts not-member to member",
 			strict: true,
-			opl: `
-				class User implements Namespace{}
-				class File implements Namespace{
-					related: {
-						blocklist: User[]
-					}
-					permits = {
-						view: (ctx: Context) => !this.related.blocklist.includes(ctx.subject)
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					File: {
+						relations: blocklist: types: ["User"]
+						permissions: view: {
+							op: "invert"
+							child: {op: "direct", relation: "blocklist"}
+						}
 					}
 				}
 			`,
@@ -328,24 +326,18 @@ func TestTraceEngine(t *testing.T) {
 			},
 		},
 		{
-			name:   "strict OPL: TTU with permit call inside traverse",
+			name:   "strict schema: TTU with permit call inside traverse",
 			strict: true,
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: {
+						relations: members: types: ["User"]
+						permissions: isMember: {op: "direct", relation: "members"}
 					}
-					permits = {
-						isMember: (ctx: Context) => this.related.members.includes(ctx.subject)
-					}
-				}
-				class File implements Namespace{
-					related: {
-						viewerGroups: Group[]
-					}
-					permits = {
-						view: (ctx: Context) => this.related.viewerGroups.traverse(g => g.permits.isMember(ctx))
+					File: {
+						relations: viewerGroups: types: ["Group"]
+						permissions: view: {op: "tupleToSubjectSet", tupleSetRelation: "viewerGroups", computedSubjectSet: "isMember"}
 					}
 				}
 			`,
@@ -371,27 +363,31 @@ func TestTraceEngine(t *testing.T) {
 			},
 		},
 
-		// ── non-strict OPL mode ───────────────────────────────────────────────────
+		// ── non-strict schema mode ───────────────────────────────────────────────────
 
 		{
 			// Non-strict mode fires the rewrite, a direct check, AND a subject-set
 			// expand concurrently even for a permit relation (view).
-			name: "non-strict OPL: OR on permit reference emits spurious direct and expand",
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-					}
-				}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						viewerGroups: Group[]
-					}
-					permits = {
-						viewGroup: (ctx: Context) => this.related.viewerGroups.traverse(g => g.related.members.includes(ctx.subject)),
-						view: (ctx: Context) => this.related.viewers.includes(ctx.subject) || this.permits.viewGroup(ctx)
+			name: "non-strict schema: OR on permit reference emits spurious direct and expand",
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: members: types: ["User"]
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							viewerGroups: types: ["Group"]
+						}
+						permissions: {
+							viewGroup: {op: "tupleToSubjectSet", tupleSetRelation: "viewerGroups", computedSubjectSet: "members"}
+							view: {
+								op: "or"
+								children: [
+									{op: "direct", relation: "viewers"},
+									{op: "direct", relation: "viewGroup"},
+								]
+							}
+						}
 					}
 				}
 			`,
@@ -457,24 +453,26 @@ func TestTraceEngine(t *testing.T) {
 		{
 			// AND: both arms must complete before the result is known, so
 			// the full tree is always explored regardless of intermediate results.
-			name: "non-strict OPL: AND requires both arms; permit-calls-permit",
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-					}
-				}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						viewerGroups: Group[]
-					}
-					permits = {
-						viewGroup: (ctx: Context) => this.related.viewerGroups.traverse(g => g.related.members.includes(ctx.subject)),
-
-						view: (ctx: Context) => this.related.viewers.includes(ctx.subject) &&
-							this.permits.viewGroup(ctx)
+			name: "non-strict schema: AND requires both arms; permit-calls-permit",
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: members: types: ["User"]
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							viewerGroups: types: ["Group"]
+						}
+						permissions: {
+							viewGroup: {op: "tupleToSubjectSet", tupleSetRelation: "viewerGroups", computedSubjectSet: "members"}
+							view: {
+								op: "and"
+								children: [
+									{op: "direct", relation: "viewers"},
+									{op: "direct", relation: "viewGroup"},
+								]
+							}
+						}
 					}
 				}
 			`,
@@ -548,13 +546,13 @@ func TestTraceEngine(t *testing.T) {
 			t.Parallel()
 			opts := []driver.TestRegistryOption{driver.WithLogLevel("info")}
 
-			if tt.opl != "" {
-				_, errs := schema.Parse(tt.opl)
-				require.Empty(t, errs, "invalid OPL in test case: %v", errs)
+			if tt.schemaSrc != "" {
+				_, errs := schema.Parse(schema.SourceFile{Name: "schema.cue", Content: []byte(tt.schemaSrc)})
+				require.Empty(t, errs, "invalid schema in test case: %v", errs)
 			}
 
-			if tt.opl != "" {
-				opts = append(opts, driver.WithOPL(tt.opl))
+			if tt.schemaSrc != "" {
+				opts = append(opts, driver.WithSchema(tt.schemaSrc))
 			} else {
 				opts = append(opts, driver.WithConfig(config.KeyNamespaces, []*namespace.Namespace{}))
 			}

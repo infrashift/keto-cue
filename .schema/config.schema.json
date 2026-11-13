@@ -298,7 +298,7 @@
         },
         "opl": {
           "type": "object",
-          "title": "Ory Permission Language Syntax API (http and gRPC)",
+          "title": "Permission Schema Syntax API (http and gRPC)",
           "additionalProperties": false,
           "properties": {
             "port": {
@@ -351,7 +351,7 @@
       "oneOf": [
         {
           "title": "Legacy namespace Repo URI",
-          "description": "A URI that points to a directory of namespace files, or a single file with all namespaces",
+          "description": "A URI that points to a CUE schema: a single file, or a directory whose *.cue files form one CUE package",
           "type": "string",
           "format": "uri"
         },
@@ -368,12 +368,12 @@
           "properties": {
             "location": {
               "type": "string",
-              "title": "Ory Permission Language config file URI",
-              "description": "A URI that points to a directory of namespace files, or a single file with all namespaces",
+              "title": "CUE permission schema URI",
+              "description": "A URI that points to a CUE schema: a single file, or a directory whose *.cue files form one CUE package",
               "format": "uri",
               "examples": [
-                "file://./keto_namespaces.ts",
-                "file:///etc/configs/keto_namespaces.ts"
+                "file://./keto_namespaces.cue",
+                "file:///etc/configs/keto_namespaces.cue"
               ]
             },
             "experimental_strict_mode": {

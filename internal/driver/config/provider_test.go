@@ -191,17 +191,11 @@ namespaces:
 // Language.
 func TestRewritesNamespaceConfig(t *testing.T) {
 	oplContent := `
-class User implements Namespace {
-  related: {
-    manager: User[]
-  }
-}
-  
-class Group implements Namespace {
-  related: {
-    members: (User | Group)[]
-  }
-}`
+		namespaces: {
+			User: relations: manager: types: ["User"]
+			Group: relations: members: types: ["User", "Group"]
+		}
+	`
 
 	oplConfigFile := createFile(t, oplContent)
 

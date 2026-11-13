@@ -19,7 +19,13 @@ import (
 func TestExpandSubjectStep_MemberFound(t *testing.T) {
 	t.Parallel()
 
-	namespaceOnlyOPL := `class User implements Namespace{} class Group implements Namespace{} class File implements Namespace{}`
+	namespaceOnlySchema := `
+		namespaces: {
+			User: {}
+			Group: {}
+			File: {}
+		}
+	`
 
 	tests := []struct {
 		scenario           testhelpers.Scenario
@@ -30,7 +36,7 @@ func TestExpandSubjectStep_MemberFound(t *testing.T) {
 		{
 			scenario: testhelpers.Scenario{
 				Name:        "1-hop subject-set hit resolves without recursive sub-check",
-				Opl:         namespaceOnlyOPL,
+				Schema:      namespaceOnlySchema,
 				InputTuples: []string{"File:f1#viewers@Group:g1#members", "Group:g1#members@User:Alice"},
 			},
 			checkInput:         "File:f1#viewers@User:Alice",
@@ -46,8 +52,8 @@ func TestExpandSubjectStep_MemberFound(t *testing.T) {
 		},
 		{
 			scenario: testhelpers.Scenario{
-				Name: "2-hop subject-set hit resolves without recursive sub-check",
-				Opl:  namespaceOnlyOPL,
+				Name:   "2-hop subject-set hit resolves without recursive sub-check",
+				Schema: namespaceOnlySchema,
 				InputTuples: []string{
 					"File:f1#viewers@Group:g1#members",
 					"Group:g1#members@Group:g2#members",
@@ -85,26 +91,20 @@ func TestExpandSubjectStep_MemberFound(t *testing.T) {
 }
 
 // TestExpandSubjectStep_NotMember documents the not-member traces across the three
-// OPL modes (namespace-only; typed OPL; typed OPL with strict mode).
+// schema modes (namespace-only; typed schema; typed schema with strict mode).
 //
-// Without typed OPL, the engine follows every subject-set pointer in the DB, including
-// leaf subjects stored as subject-sets with an empty relation. With typed OPL the engine
+// Without typed schema, the engine follows every subject-set pointer in the DB, including
+// leaf subjects stored as subject-sets with an empty relation. With typed schema the engine
 // filters expansion to only the subject-set types declared in the schema, skipping leaf
 // subjects that are not valid subject-set types for the relation.
 func TestExpandSubjectStep_NotMember(t *testing.T) {
 	t.Parallel()
 
-	typedOPL := `
-		class User implements Namespace{}
-		class Group implements Namespace{
-			related: {
-				members: (User|SubjectSet<Group, "members">)[]
-			}
-		}
-		class File implements Namespace{
-			related: {
-				viewers: SubjectSet<Group, "members">[]
-			}
+	typedSchema := `
+		namespaces: {
+			User: {}
+			Group: relations: members: types: ["User", "Group#members"]
+			File: relations: viewers: types: ["Group#members"]
 		}
 	`
 	inputTuples := []string{
@@ -122,8 +122,14 @@ func TestExpandSubjectStep_NotMember(t *testing.T) {
 			// The engine follows every subject-set pointer including leaf subjects stored as SubjectSets.
 			// In only-namespaces setup, everything	in DB is treated as a valid.
 			scenario: testhelpers.Scenario{
-				Name:        "namespace-only-OPL: no filter available, recurses into leaf subject-sets",
-				Opl:         `class User implements Namespace{} class Group implements Namespace{} class File implements Namespace{}`,
+				Name: "namespace-only-schema: no filter available, recurses into leaf subject-sets",
+				Schema: `
+					namespaces: {
+						User: {}
+						Group: {}
+						File: {}
+					}
+				`,
 				InputTuples: inputTuples,
 			},
 			checkInput:         "File:f1#viewers@User:Bob",
@@ -146,12 +152,12 @@ func TestExpandSubjectStep_NotMember(t *testing.T) {
 			},
 		},
 		{
-			// In non-strict mode the OPL filter is not applied, so the engine recurses
+			// In non-strict mode the schema filter is not applied, so the engine recurses
 			// into every subject-set pointer including leaf Users stored as empty-relation
 			// SubjectSets. This matches the namespace-only behavior.
 			scenario: testhelpers.Scenario{
-				Name:        "valid-OPL: without filter, recurses into leaf subject-sets",
-				Opl:         typedOPL,
+				Name:        "valid-schema: without filter, recurses into leaf subject-sets",
+				Schema:      typedSchema,
 				InputTuples: inputTuples,
 			},
 			checkInput:         "File:f1#viewers@User:Bob",
@@ -173,9 +179,9 @@ func TestExpandSubjectStep_NotMember(t *testing.T) {
 		},
 		{
 			scenario: testhelpers.Scenario{
-				Name:        "valid-OPL-strict: with filter, skips leaf subject-sets",
+				Name:        "valid-schema-strict: with filter, skips leaf subject-sets",
 				Strict:      true,
-				Opl:         typedOPL,
+				Schema:      typedSchema,
 				InputTuples: inputTuples,
 			},
 			checkInput:         "File:f1#viewers@User:Bob",
@@ -211,29 +217,23 @@ func TestExpandSubjectStep_NotMember(t *testing.T) {
 // TestExpandSubjectStep_StaleSubjectSet shows how stale subject-set tuples behave
 // differently in strict vs non-strict mode.
 //
-// Scenario: OPL declares viewers: SubjectSet<Group, "admins">[], but the DB still
-// contains a tuple for the old "members" relation. In strict mode the OPL filter
+// Scenario: schema declares viewers: SubjectSet<Group, "admins">[], but the DB still
+// contains a tuple for the old "members" relation. In strict mode the schema filter
 // blocks the stale pointer and access is denied. In non-strict mode no filter is
 // applied, so the stale pointer is followed and access is incorrectly granted.
 // Clients should migrate to strict mode to prevent stale tuples from granting access.
 func TestExpandSubjectStep_StaleSubjectSet(t *testing.T) {
 	t.Parallel()
 
-	opl := `
-		class User implements Namespace{}
-		class Group implements Namespace{
-			related: {
-				admins: User[]
-			}
-		}
-		class File implements Namespace{
-			related: {
-				viewers: SubjectSet<Group, "admins">[]
-			}
+	schemaSrc := `
+		namespaces: {
+			User: {}
+			Group: relations: admins: types: ["User"]
+			File: relations: viewers: types: ["Group#admins"]
 		}
 	`
 	inputTuples := []string{
-		// "members" was removed from OPL but the tuple was not cleaned up in the DB.
+		// "members" was removed from schema but the tuple was not cleaned up in the DB.
 		"File:f1#viewers@Group:g1#members",
 		"Group:g1#members@User:Alice",
 	}
@@ -244,11 +244,11 @@ func TestExpandSubjectStep_StaleSubjectSet(t *testing.T) {
 		expectedTrace      func(t testing.TB) *trace.Node
 	}{
 		{
-			// Without the OPL filter, the stale "members" pointer is followed and
+			// Without the schema filter, the stale "members" pointer is followed and
 			// Alice is found as a direct member of Group:g1#members.
 			scenario: testhelpers.Scenario{
-				Name:        "valid-OPL: stale subject-set tuples are followed without OPL filter",
-				Opl:         opl,
+				Name:        "valid-schema: stale subject-set tuples are followed without schema filter",
+				Schema:      schemaSrc,
 				InputTuples: inputTuples,
 			},
 			expectedMembership: check.IsMember,
@@ -262,14 +262,14 @@ func TestExpandSubjectStep_StaleSubjectSet(t *testing.T) {
 			},
 		},
 		{
-			// In strict mode the OPL filter is applied: only SubjectSet<Group,"admins">
+			// In strict mode the schema filter is applied: only SubjectSet<Group,"admins">
 			// pointers are expanded. The stale "members" tuple is filtered out.
 			// The direct step is also skipped because File#viewers does not declare
 			// User as a direct type — only SubjectSet<Group,"admins"> is allowed.
 			scenario: testhelpers.Scenario{
-				Name:        "valid-OPL-strict: stale subject-set tuples are filtered by OPL",
+				Name:        "valid-schema-strict: stale subject-set tuples are filtered by schema",
 				Strict:      true,
-				Opl:         opl,
+				Schema:      schemaSrc,
 				InputTuples: inputTuples,
 			},
 			expectedMembership: check.NotMember,
@@ -295,7 +295,7 @@ func TestExpandSubjectStep_StaleSubjectSet(t *testing.T) {
 	}
 }
 
-func TestSubjectSetExpansionOPLFilter(t *testing.T) {
+func TestSubjectSetExpansionSchemaFilter(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -311,30 +311,18 @@ func TestSubjectSetExpansionOPLFilter(t *testing.T) {
 			scenario: testhelpers.Scenario{
 				Name:   "nested SubjectSet chain with Direct User at the very end",
 				Strict: true,
-				Opl: `
-					class User implements Namespace{}
-
-					class Subgroup implements Namespace{
-						related: {
-							members: User[]
-						}
-					}
-
-					class Group implements Namespace{
-						related: {
-							members: SubjectSet<Subgroup, "members">[]
-						}
-					}
-					class File implements Namespace{
-						related: {
-							viewers: SubjectSet<Group, "members">[]
-						}
+				Schema: `
+					namespaces: {
+						User: {}
+						Subgroup: relations: members: types: ["User"]
+						Group: relations: members: types: ["Subgroup#members"]
+						File: relations: viewers: types: ["Group#members"]
 					}
 				`,
-				// According to OPL, the only valid viewer is User:Bob, as it follows
-				// the subjectset chain declared in OPL.
+				// According to schema, the only valid viewer is User:Bob, as it follows
+				// the subjectset chain declared in schema.
 				InputTuples: []string{
-					// tuple exists even though "viewers" cannot accept direct-User by OPL
+					// tuple exists even though "viewers" cannot accept direct-User by schema
 					"File:f1#viewers@User:Alice",
 
 					// File:f1#viewers c Group:g1#members c Subgroup:sg1#members c User:Bob
@@ -373,9 +361,9 @@ func TestSubjectSetExpansionOPLFilter(t *testing.T) {
 					},
 				},
 				{
-					// Eve is stored as a direct member of Group:g1#members, but OPL declares
+					// Eve is stored as a direct member of Group:g1#members, but schema declares
 					// Group#members as SubjectSet<Subgroup,"members"> only — no direct subjects.
-					name:               "User:Eve stored directly in Group but OPL forbids direct subjects there",
+					name:               "User:Eve stored directly in Group but schema forbids direct subjects there",
 					input:              "File:f1#viewers@User:Eve",
 					expectedMembership: check.NotMember,
 					expectedTrace: func(t testing.TB) *trace.Node {
@@ -439,17 +427,17 @@ func TestSubjectSetExpansionOPLFilter(t *testing.T) {
 					},
 				},
 				{
-					// SubjectID has no namespace, so OPL type constraints cannot apply to it
-					name:               "SubjectID Alice bypasses OPL type constraints and is member",
+					// SubjectID has no namespace, so schema type constraints cannot apply to it
+					name:               "SubjectID Alice bypasses schema type constraints and is member",
 					input:              "File:f2#viewers@Alice",
 					expectedMembership: check.IsMember,
 					expectedTrace: func(t testing.TB) *trace.Node {
 						return trace.CheckNode(t, trace.ResultMember, "File:f2#viewers@Alice",
 							// in non-strict mode, the engine would follow the direct SubjectID pointer here and
-							// incorrectly find Alice as a member of Group:g1#members, even though OPL only allows
+							// incorrectly find Alice as a member of Group:g1#members, even though schema only allows
 							// SubjectSet<Team,"members">.
 							// We don't expect SubjectID to be used in strict mode, but if it is, it should be allowed to bypass
-							// OPL for backward compatibility.
+							// schema for backward compatibility.
 							trace.DirectNode(t, trace.ResultNotMember, "File:f2#viewers@Alice"),
 							trace.ExpandNode(t, trace.ResultMember, "File:f2#viewers@Alice", 1,
 								trace.FoundNode(t, "Group:g2#members@Alice"),

@@ -435,7 +435,7 @@ func TestEngine(t *testing.T) {
 func TestEngineOpl(t *testing.T) {
 	type expandTest struct {
 		name        string
-		opl         string
+		schemaSrc   string
 		inputTuples []string
 		expandInput string
 		expected    *relationtuple.Tree
@@ -447,38 +447,30 @@ func TestEngineOpl(t *testing.T) {
 		{
 			name:   "case=Multile levels of union and exclusion",
 			strict: true,
-			opl: `
-			class User implements Namespace {}
-			class Corporate implements Namespace {
-				related: {
-					releasers: User[]
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Corporate: relations: releasers: types: ["User"]
+					UserGroup: relations: members: types: ["User"]
+					AccountGroup: relations: managers: types: ["UserGroup#members"]
+					Account: relations: managers: types: ["AccountGroup#managers"]
+					Task: {
+						relations: {
+							managers: types: ["Account#managers", "Corporate#releasers"]
+							blocklist: types: ["UserGroup#members"]
+						}
+						permissions: viewer: {
+							op: "and"
+							children: [
+								{op: "direct", relation: "managers"},
+								{
+									op: "invert"
+									child: {op: "direct", relation: "blocklist"}
+								},
+							]
+						}
+					}
 				}
-			}					
-			class UserGroup implements Namespace {
-				related: {
-					members: User[]
-				}
-			}
-			class AccountGroup implements Namespace {
-				related: {
-					managers: SubjectSet<UserGroup, "members">[]
-				}
-			}
-			class Account implements Namespace {
-				related: {
-					managers: SubjectSet<AccountGroup, "managers">[]
-				}
-			}
-			class Task implements Namespace {
-				related: {
-					managers: (SubjectSet<Account, "managers"> | SubjectSet<Corporate, "releasers">)[]
-					
-					blocklist: SubjectSet<UserGroup, "members">[]
-				}
-				permits = {
-					viewer: (ctx: Context) => this.related.managers.includes(ctx.subject) && !this.related.blocklist.includes(ctx.subject)
-				}
-			}
 			`,
 
 			inputTuples: []string{
@@ -541,8 +533,8 @@ func TestEngineOpl(t *testing.T) {
 			),
 		},
 		{
-			name: "case=expands 1 level without OPL",
-			opl:  "",
+			name:      "case=expands 1 level without schema",
+			schemaSrc: "",
 			inputTuples: []string{
 				"Group:parent#users@User:1",
 				"Group:parent#users@User:2",
@@ -560,15 +552,13 @@ func TestEngineOpl(t *testing.T) {
 			),
 		},
 		{
-			name: "case=expands simple ComputedSubjectSet level with OPL",
-			opl: `
-				class User implements Namespace{}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-					}
-					permits = {
-						view: (ctx: Context) => this.related.viewers.includes(ctx.subject)
+			name: "case=expands simple ComputedSubjectSet level with schema",
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					File: {
+						relations: viewers: types: ["User"]
+						permissions: view: {op: "direct", relation: "viewers"}
 					}
 				}
 			`,
@@ -587,16 +577,17 @@ func TestEngineOpl(t *testing.T) {
 			),
 		},
 		{
-			name:   "case=expands simple Inverted ComputedSubjectSet level with OPL",
+			name:   "case=expands simple Inverted ComputedSubjectSet level with schema",
 			strict: true,
-			opl: `
-				class User implements Namespace{}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-					}
-					permits = {
-						view: (ctx: Context) => !this.related.viewers.includes(ctx.subject)
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					File: {
+						relations: viewers: types: ["User"]
+						permissions: view: {
+							op: "invert"
+							child: {op: "direct", relation: "viewers"}
+						}
 					}
 				}
 			`,
@@ -618,15 +609,24 @@ func TestEngineOpl(t *testing.T) {
 		},
 		{
 			name: "case=expands blocklistexample",
-			opl: `
-				class User implements Namespace{}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						blocklist: User[]
-					}
-					permits = {
-						view: (ctx: Context) => this.related.viewers.includes(ctx.subject) && !this.related.blocklist.includes(ctx.subject)
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							blocklist: types: ["User"]
+						}
+						permissions: view: {
+							op: "and"
+							children: [
+								{op: "direct", relation: "viewers"},
+								{
+									op: "invert"
+									child: {op: "direct", relation: "blocklist"}
+								},
+							]
+						}
 					}
 				}
 			`,
@@ -650,21 +650,31 @@ func TestEngineOpl(t *testing.T) {
 		},
 		{
 			name: "case=expands 2 blocklists example",
-			opl: `
-				class User implements Namespace{}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						blocklist1: User[]
-						blocklist2: User[]
-					}
-					permits = {
-						view: (ctx: Context) => 
-							this.related.viewers.includes(ctx.subject) &&
-							!(
-								this.related.blocklist1.includes(ctx.subject) &&
-								this.related.blocklist2.includes(ctx.subject)
-							)
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							blocklist1: types: ["User"]
+							blocklist2: types: ["User"]
+						}
+						permissions: view: {
+							op: "and"
+							children: [
+								{op: "direct", relation: "viewers"},
+								{
+									op: "invert"
+									child: {
+										op: "and"
+										children: [
+											{op: "direct", relation: "blocklist1"},
+											{op: "direct", relation: "blocklist2"},
+										]
+									}
+								},
+							]
+						}
 					}
 				}
 			`,
@@ -692,21 +702,22 @@ func TestEngineOpl(t *testing.T) {
 		},
 		{
 			name: "case=expands (includes or traverse)",
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-					}
-				}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						viewerGroups: Group[]
-					}
-					permits = {
-						view: (ctx: Context) => this.related.viewers.includes(ctx.subject) ||
-							this.related.viewerGroups.traverse(g => g.related.members.includes(ctx.subject))
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: members: types: ["User"]
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							viewerGroups: types: ["Group"]
+						}
+						permissions: view: {
+							op: "or"
+							children: [
+								{op: "direct", relation: "viewers"},
+								{op: "tupleToSubjectSet", tupleSetRelation: "viewerGroups", computedSubjectSet: "members"},
+							]
+						}
 					}
 				}
 			`,
@@ -734,21 +745,22 @@ func TestEngineOpl(t *testing.T) {
 		},
 		{
 			name: "case=expands (includes or traverse) - traverse group has no member tuples",
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-					}
-				}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						viewerGroups: Group[]
-					}
-					permits = {
-						view: (ctx: Context) => this.related.viewers.includes(ctx.subject) ||
-							this.related.viewerGroups.traverse(g => g.related.members.includes(ctx.subject))
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: members: types: ["User"]
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							viewerGroups: types: ["Group"]
+						}
+						permissions: view: {
+							op: "or"
+							children: [
+								{op: "direct", relation: "viewers"},
+								{op: "tupleToSubjectSet", tupleSetRelation: "viewerGroups", computedSubjectSet: "members"},
+							]
+						}
 					}
 				}
 			`,
@@ -773,21 +785,22 @@ func TestEngineOpl(t *testing.T) {
 		},
 		{
 			name: "case=expands (includes and traverse) - traverse has no tuples",
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-					}
-				}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						viewerGroups: Group[]
-					}
-					permits = {
-						view: (ctx: Context) => this.related.viewers.includes(ctx.subject) &&
-							this.related.viewerGroups.traverse(g => g.related.members.includes(ctx.subject))
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: members: types: ["User"]
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							viewerGroups: types: ["Group"]
+						}
+						permissions: view: {
+							op: "and"
+							children: [
+								{op: "direct", relation: "viewers"},
+								{op: "tupleToSubjectSet", tupleSetRelation: "viewerGroups", computedSubjectSet: "members"},
+							]
+						}
 					}
 				}
 			`,
@@ -808,23 +821,26 @@ func TestEngineOpl(t *testing.T) {
 		},
 		{
 			name: "case=expands multiple child permits",
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-					}
-				}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						viewerGroups: Group[]
-					}
-					permits = {
-						viewUser: (ctx: Context) => this.related.viewers.includes(ctx.subject),
-						viewGroup: (ctx: Context) => this.related.viewerGroups.traverse(g => g.related.members.includes(ctx.subject)),
-
-						view: (ctx: Context) => this.permits.viewUser(ctx) && this.permits.viewGroup(ctx)
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: members: types: ["User"]
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							viewerGroups: types: ["Group"]
+						}
+						permissions: {
+							viewUser: {op: "direct", relation: "viewers"}
+							viewGroup: {op: "tupleToSubjectSet", tupleSetRelation: "viewerGroups", computedSubjectSet: "members"}
+							view: {
+								op: "and"
+								children: [
+									{op: "direct", relation: "viewUser"},
+									{op: "direct", relation: "viewGroup"},
+								]
+							}
+						}
 					}
 				}
 			`,
@@ -856,21 +872,28 @@ func TestEngineOpl(t *testing.T) {
 		},
 		{
 			name: "case=expands compound relations",
-			opl: `
-				class User implements Namespace{}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						editors: User[]
-						owners: User[]
-					}
-					permits = {
-						view: (ctx: Context) => 
-							(
-								this.related.viewers.includes(ctx.subject) ||
-								this.related.editors.includes(ctx.subject)
-							) &&
-							this.related.owners.includes(ctx.subject)
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							editors: types: ["User"]
+							owners: types: ["User"]
+						}
+						permissions: view: {
+							op: "and"
+							children: [
+								{
+									op: "or"
+									children: [
+										{op: "direct", relation: "viewers"},
+										{op: "direct", relation: "editors"},
+									]
+								},
+								{op: "direct", relation: "owners"},
+							]
+						}
 					}
 				}
 			`,
@@ -898,27 +921,33 @@ func TestEngineOpl(t *testing.T) {
 		},
 		{
 			name: "case=expands repeated child permit calls",
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-					}
-				}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						viewerGroups: Group[]
-					}
-					permits = {
-						viewUser: (ctx: Context) => this.related.viewers.includes(ctx.subject),
-						viewGroup: (ctx: Context) => this.related.viewerGroups.traverse(g => g.related.members.includes(ctx.subject)),
-
-						view: (ctx: Context) => (
-							( this.permits.viewUser(ctx) && this.permits.viewGroup(ctx) )
-							 ||
-							( this.permits.viewUser(ctx) || this.permits.viewGroup(ctx) )
-						)
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: members: types: ["User"]
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							viewerGroups: types: ["Group"]
+						}
+						permissions: {
+							viewUser: {op: "direct", relation: "viewers"}
+							viewGroup: {op: "tupleToSubjectSet", tupleSetRelation: "viewerGroups", computedSubjectSet: "members"}
+							view: {
+								op: "or"
+								children: [
+									{
+										op: "and"
+										children: [
+											{op: "direct", relation: "viewUser"},
+											{op: "direct", relation: "viewGroup"},
+										]
+									},
+									{op: "direct", relation: "viewUser"},
+									{op: "direct", relation: "viewGroup"},
+								]
+							}
+						}
 					}
 				}
 			`,
@@ -966,16 +995,21 @@ func TestEngineOpl(t *testing.T) {
 		},
 		{
 			name: "case=expands recursive groups should detect circular references",
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-						parent: Group[]
-					}
-					permits = {
-						isMember: (ctx: Context) => this.related.members.includes(ctx.subject) ||
-							this.related.parent.traverse(g => g.permits.isMember(ctx))
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: {
+						relations: {
+							members: types: ["User"]
+							parent: types: ["Group"]
+						}
+						permissions: isMember: {
+							op: "or"
+							children: [
+								{op: "direct", relation: "members"},
+								{op: "tupleToSubjectSet", tupleSetRelation: "parent", computedSubjectSet: "isMember"},
+							]
+						}
 					}
 				}
 			`,
@@ -1039,24 +1073,28 @@ func TestEngineOpl(t *testing.T) {
 			),
 		},
 		{
-			name:     "case=node limit does not block OPL structural traversal when there's data",
+			name:     "case=node limit does not block schema structural traversal when there's data",
 			maxNodes: 3,
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-					}
-				}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-						viewerGroups: Group[]
-					}
-					permits = {
-						viewUser: (ctx: Context) => this.related.viewers.includes(ctx.subject),
-						viewGroup: (ctx: Context) => this.related.viewerGroups.traverse(g => g.related.members.includes(ctx.subject)),
-						view: (ctx: Context) => this.permits.viewUser(ctx) || this.permits.viewGroup(ctx)
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: members: types: ["User"]
+					File: {
+						relations: {
+							viewers: types: ["User"]
+							viewerGroups: types: ["Group"]
+						}
+						permissions: {
+							viewUser: {op: "direct", relation: "viewers"}
+							viewGroup: {op: "tupleToSubjectSet", tupleSetRelation: "viewerGroups", computedSubjectSet: "members"}
+							view: {
+								op: "or"
+								children: [
+									{op: "direct", relation: "viewUser"},
+									{op: "direct", relation: "viewGroup"},
+								]
+							}
+						}
 					}
 				}
 			`,
@@ -1091,21 +1129,22 @@ func TestEngineOpl(t *testing.T) {
 		{
 			name:   "case=unknown 2nd relationship on strict mode",
 			strict: true,
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						viewers: User[]
-					}
-				}
-				class File implements Namespace{
-					related: {
-						groupViewers: SubjectSet<Group, "viewers">[]
-						groups: Group[]
-					}
-					permits = {
-						view: (ctx: Context) => this.related.groupViewers.includes(ctx.subject) ||
-							|| this.related.groups.traverse(g => g.related.viewers.includes(ctx.subject))
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: relations: viewers: types: ["User"]
+					File: {
+						relations: {
+							groupViewers: types: ["Group#viewers"]
+							groups: types: ["Group"]
+						}
+						permissions: view: {
+							op: "or"
+							children: [
+								{op: "direct", relation: "groupViewers"},
+								{op: "tupleToSubjectSet", tupleSetRelation: "groups", computedSubjectSet: "viewers"},
+							]
+						}
 					}
 				}
 			`,
@@ -1128,12 +1167,10 @@ func TestEngineOpl(t *testing.T) {
 			name:     "case=unknown relationship on strict mode",
 			maxNodes: 3,
 			strict:   true,
-			opl: `
-				class User implements Namespace{}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-					}
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					File: relations: viewers: types: ["User"]
 				}
 			`,
 			inputTuples: []string{
@@ -1146,12 +1183,10 @@ func TestEngineOpl(t *testing.T) {
 			name:     "case=unknown namespace on strict mode",
 			maxNodes: 3,
 			strict:   true,
-			opl: `
-				class User implements Namespace{}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-					}
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					File: relations: viewers: types: ["User"]
 				}
 			`,
 			inputTuples: []string{
@@ -1163,12 +1198,10 @@ func TestEngineOpl(t *testing.T) {
 		{
 			name:     "case=unknown relationship on non-strict mode",
 			maxNodes: 3,
-			opl: `
-				class User implements Namespace{}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-					}
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					File: relations: viewers: types: ["User"]
 				}
 			`,
 			inputTuples: []string{
@@ -1182,12 +1215,10 @@ func TestEngineOpl(t *testing.T) {
 		{
 			name:     "case=unknown namespace on non-strict mode",
 			maxNodes: 3,
-			opl: `
-				class User implements Namespace{}
-				class File implements Namespace{
-					related: {
-						viewers: User[]
-					}
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					File: relations: viewers: types: ["User"]
 				}
 			`,
 			inputTuples: []string{},
@@ -1197,12 +1228,10 @@ func TestEngineOpl(t *testing.T) {
 		{
 			name:   "case=limit should be applied and prevent nesting",
 			strict: true,
-			opl: `
-				class File implements Namespace{}
-				class Folder implements Namespace{
-					related: {
-						members: (File | SubjectSet<Folder, "members">)[]
-					}
+			schemaSrc: `
+				namespaces: {
+					File: {}
+					Folder: relations: members: types: ["File", "Folder#members"]
 				}
 			`,
 			// the 1st digit refers to the depth, 2nd digit refers to the position in that depth.
@@ -1256,18 +1285,23 @@ func TestEngineOpl(t *testing.T) {
 		},
 		{
 			name: "case=direct relations should be prioritized over rewrites",
-			opl: `
-				class User implements Namespace{}
-				class Group implements Namespace{
-					related: {
-						members: User[]
-						parent: Group[]
-						hiddenMembers: User[]
-					}
-					permits = {
-						isMember: (ctx: Context) => this.related.members.includes(ctx.subject) 
-							||	this.related.parent.traverse(p => p.permits.isMember(ctx))
-							||	this.related.hiddenMembers.includes(ctx.subject) 
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Group: {
+						relations: {
+							members: types: ["User"]
+							parent: types: ["Group"]
+							hiddenMembers: types: ["User"]
+						}
+						permissions: isMember: {
+							op: "or"
+							children: [
+								{op: "direct", relation: "members"},
+								{op: "tupleToSubjectSet", tupleSetRelation: "parent", computedSubjectSet: "isMember"},
+								{op: "direct", relation: "hiddenMembers"},
+							]
+						}
 					}
 				}
 			`,
@@ -1313,8 +1347,8 @@ func TestEngineOpl(t *testing.T) {
 				continue
 			}
 			t.Run(tt.name, func(t *testing.T) {
-				if tt.opl != "" {
-					_, errs := schema.Parse(tt.opl)
+				if tt.schemaSrc != "" {
+					_, errs := schema.Parse(schema.SourceFile{Name: "schema.cue", Content: []byte(tt.schemaSrc)})
 					require.Empty(t, errs)
 				}
 				opts := []driver.TestRegistryOption{
@@ -1322,8 +1356,8 @@ func TestEngineOpl(t *testing.T) {
 					driver.WithConfig(config.KeyLimitMaxReadDepth, 50),
 				}
 
-				if tt.opl != "" {
-					opts = append(opts, driver.WithOPL(tt.opl))
+				if tt.schemaSrc != "" {
+					opts = append(opts, driver.WithSchema(tt.schemaSrc))
 				} else {
 					opts = append(opts, driver.WithConfig(config.KeyNamespaces, []*namespace.Namespace{}))
 				}

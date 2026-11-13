@@ -1,0 +1,78 @@
+---
+title: keto-cue
+description: keto-cue is a fork of Ory Keto that reads Zanzibar permission schemas in CUE.
+sidebar:
+  order: 0
+  label: Overview
+---
+
+import { CardGrid, Card, LinkCard, Aside } from '@astrojs/starlight/components';
+
+**keto-cue** is a fork of [Ory Keto](https://github.com/ory/keto), an open
+source implementation of Google's Zanzibar authorization system. keto-cue
+reads permission schemas in [CUE](https://cuelang.org). It does not read the
+Ory Permission Language (OPL).
+
+The CUE compiler writes the same namespace tree that the OPL parser wrote. The
+check engine, the expand engine, the storage and the APIs do not change.
+
+```cue
+namespaces: {
+	User: {}
+	Folder: {
+		relations: {
+			parents: ["Folder"]
+			viewers: ["User"]
+		}
+		permissions: view: or: ["viewers", "parents->view"]
+	}
+}
+```
+
+<Aside type="note" title="No release yet">
+keto-cue has no binary release. Build it from source with Go. See
+[Getting Started](./getting-started/).
+</Aside>
+
+<CardGrid>
+	<Card title="Short rewrites" icon="pencil">
+		`"owners"`, `"parents->view"`, `{or: [...]}`, `{and: [...]}` and
+		`{not: ...}`. A schema is shorter than the same schema in OPL.
+	</Card>
+	<Card title="Real CUE" icon="puzzle">
+		Use definitions, comprehensions and the CUE standard library to
+		share rules between namespaces.
+	</Card>
+	<Card title="Clear errors" icon="warning">
+		Each error names the file, the line and the column, and shows the
+		source with a marker.
+	</Card>
+	<Card title="Same engine" icon="approve-check">
+		The check and expand engines, the storage and the gRPC and REST APIs
+		are the Ory Keto code.
+	</Card>
+	<Card title="Validate in CI" icon="document">
+		`keto namespace validate` checks a schema file or directory before
+		you deploy it.
+	</Card>
+	<Card title="Bounded syntax check" icon="setting">
+		The syntax-check API limits the request size, the concurrent checks
+		and the time of each check.
+	</Card>
+</CardGrid>
+
+<LinkCard
+	title="Getting Started"
+	description="Build keto-cue, write a schema and check a permission."
+	href="./getting-started/"
+/>
+<LinkCard
+	title="Rewrites"
+	description="The short forms and the long form of a permission rule."
+	href="./guides/rewrites/"
+/>
+<LinkCard
+	title="Migrating from OPL"
+	description="Translate an OPL schema to CUE."
+	href="./guides/migrating-from-opl/"
+/>

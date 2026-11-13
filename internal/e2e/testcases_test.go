@@ -382,10 +382,11 @@ func runCases(c client, m *namespaceTestManager) func(*testing.T) {
 			m.add(t, n)
 		})
 
-		t.Run("case=OPL syntax check", func(t *testing.T) {
-			parseErrors := c.oplCheckSyntax(t, []byte("/* unclosed comment"))
+		t.Run("case=schema syntax check", func(t *testing.T) {
+			parseErrors := c.oplCheckSyntax(t, []byte(`namespaces: A: permissions: p: {op: "direct", relation: "nope"}`))
 			require.Len(t, parseErrors, 1)
-			assert.Contains(t, parseErrors[0].Message, "unclosed comment")
+			assert.Equal(t, `namespace "A" did not declare relation "nope"`, parseErrors[0].Message)
+			assert.Equal(t, 1, parseErrors[0].Start.Line)
 		})
 	}
 }

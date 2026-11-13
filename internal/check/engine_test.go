@@ -32,12 +32,10 @@ import (
 // frontend ⊃ User:Bob, Bob
 var ExpansionRecursive = testhelpers.Scenario{
 	Name: "Expansion Recursive",
-	Opl: `
-		class User implements Namespace{}
-		class Group implements Namespace{
-			related: {
-				members: (User | SubjectSet<Group, "members">)[]
-			}
+	Schema: `
+		namespaces: {
+			User: {}
+			Group: relations: members: types: ["User", "Group#members"]
 		}
 	`,
 	InputTuples: []string{
@@ -58,8 +56,13 @@ var ExpansionRecursive = testhelpers.Scenario{
 }
 
 var ExpansionRecursiveNamespaceOnly = testhelpers.Scenario{
-	Name:        ExpansionRecursive.Name + " (namespaces only)",
-	Opl:         `class User implements Namespace{} class Group implements Namespace{}`,
+	Name: ExpansionRecursive.Name + " (namespaces only)",
+	Schema: `
+		namespaces: {
+			User: {}
+			Group: {}
+		}
+	`,
 	InputTuples: ExpansionRecursive.InputTuples,
 }
 
@@ -69,17 +72,13 @@ var ExpansionRecursiveNamespaceOnly = testhelpers.Scenario{
 // File:personal-note#viewers ⊃ User:Alice, User:Bob
 var SubjectSetExpansion3Hop = testhelpers.Scenario{
 	Name: "SubjectSet Expansion 3 Hops",
-	Opl: `
-		class User implements Namespace{}
-		class Group implements Namespace{
-			related: {
-				member: User[]
-			}
-		}
-		class File implements Namespace{
-			related: {
-				editors: (User | SubjectSet<Group, "member">)[]
-				viewers: (User | SubjectSet<File, "editors">)[]
+	Schema: `
+		namespaces: {
+			User: {}
+			Group: relations: member: types: ["User"]
+			File: relations: {
+				editors: types: ["User", "Group#member"]
+				viewers: types: ["User", "File#editors"]
 			}
 		}
 	`,
@@ -96,8 +95,14 @@ var SubjectSetExpansion3Hop = testhelpers.Scenario{
 }
 
 var SubjectSetExpansion3HopNamespacesOnly = testhelpers.Scenario{
-	Name:        SubjectSetExpansion3Hop.Name + " (namespaces only)",
-	Opl:         `class User implements Namespace{} class Group implements Namespace{} class File implements Namespace{}`,
+	Name: SubjectSetExpansion3Hop.Name + " (namespaces only)",
+	Schema: `
+		namespaces: {
+			User: {}
+			Group: {}
+			File: {}
+		}
+	`,
 	InputTuples: SubjectSetExpansion3Hop.InputTuples,
 }
 
@@ -106,8 +111,8 @@ var SubjectSetExpansion3HopNamespacesOnly = testhelpers.Scenario{
 // A → B → C → A.
 var CircularGraphNamespacesOnly = testhelpers.Scenario{
 	Name: "Circular Graph (namespaces only)",
-	Opl: `
-		class Folder implements Namespace{}
+	Schema: `
+		namespaces: Folder: {}
 	`,
 	InputTuples: []string{
 		"Folder:a#parent@Folder:b#parent",
@@ -121,20 +126,28 @@ var CircularGraphNamespacesOnly = testhelpers.Scenario{
 // related fields (editors, viewers).
 //
 // In strict mode the engine ignores those tuples and resolves access only via
-// OPL rewrites. In non-strict mode the direct tuples are visible alongside the
+// schema rewrites. In non-strict mode the direct tuples are visible alongside the
 // rewrites.
 var FileWithNonConformingTuples = testhelpers.Scenario{
 	Name: "File With Non-Conforming Tuples",
-	Opl: `
-		class User implements Namespace {}
-		class File implements Namespace {
-			related: {
-				editors: User[]
-				viewers: User[]
-			}
-			permits = {
-				canEdit: (ctx: Context) => this.related.editors.includes(ctx.subject),
-				canView: (ctx: Context) => this.permits.canEdit(ctx) || this.related.viewers.includes(ctx.subject),
+	Schema: `
+		namespaces: {
+			User: {}
+			File: {
+				relations: {
+					editors: types: ["User"]
+					viewers: types: ["User"]
+				}
+				permissions: {
+					canEdit: {op: "direct", relation: "editors"}
+					canView: {
+						op: "or"
+						children: [
+							{op: "direct", relation: "canEdit"},
+							{op: "direct", relation: "viewers"},
+						]
+					}
+				}
 			}
 		}
 	`,
@@ -154,28 +167,34 @@ var FileWithNonConformingTuples = testhelpers.Scenario{
 // canEdit requires direct editor access AND workspace membership.
 var NotionPage = testhelpers.Scenario{
 	Name: "Notion Page",
-	Opl: `
-		class User implements Namespace {}
-		class Workspace implements Namespace {
-			related: {
-				member: User[]
-			}
-		}
-		class Page implements Namespace {
-			related: {
-				workspace: Workspace[]
-				parent: Page[]
-				viewer: User[]
-				editor: User[]
-			}
-			permits = {
-				canView: (ctx: Context) =>
-					this.related.viewer.includes(ctx.subject) ||
-					this.related.editor.includes(ctx.subject) ||
-					this.related.parent.traverse(p => p.permits.canView(ctx)),
-				canEdit: (ctx: Context) =>
-					this.related.editor.includes(ctx.subject) &&
-					this.related.workspace.traverse(w => w.related.member.includes(ctx.subject)),
+	Schema: `
+		namespaces: {
+			User: {}
+			Workspace: relations: member: types: ["User"]
+			Page: {
+				relations: {
+					workspace: types: ["Workspace"]
+					parent: types: ["Page"]
+					viewer: types: ["User"]
+					editor: types: ["User"]
+				}
+				permissions: {
+					canView: {
+						op: "or"
+						children: [
+							{op: "direct", relation: "viewer"},
+							{op: "direct", relation: "editor"},
+							{op: "tupleToSubjectSet", tupleSetRelation: "parent", computedSubjectSet: "canView"},
+						]
+					}
+					canEdit: {
+						op: "and"
+						children: [
+							{op: "direct", relation: "editor"},
+							{op: "tupleToSubjectSet", tupleSetRelation: "workspace", computedSubjectSet: "member"},
+						]
+					}
+				}
 			}
 		}
 	`,
@@ -269,11 +288,13 @@ var testcases = []struct {
 	{
 		scenarios: []testhelpers.Scenario{{
 			Name: "rejects transitive relation",
-			Opl: `
-						class User implements Namespace{}
-						class Directory implements Namespace{}
-						class File implements Namespace{}
-					`,
+			Schema: `
+				namespaces: {
+					User: {}
+					Directory: {}
+					File: {}
+				}
+			`,
 			InputTuples: []string{
 				"File:report#parent@Directory:docs",
 				"Directory:docs#access@User:Alice",
@@ -289,7 +310,7 @@ var testcases = []struct {
 			"File:secret-doc#viewers@User:Bob",
 			"File:secret-doc#editors@User:Alice",
 
-			// via OPL
+			// via schema
 			"File:secret-doc#canView@User:Bob",
 			"File:secret-doc#canEdit@User:Alice",
 			"File:secret-doc#canView@User:Alice",
@@ -333,14 +354,14 @@ var testcases = []struct {
 			"File:secret-doc#viewers@User:Bob",
 			"File:secret-doc#editors@User:Alice",
 
-			// via OPL
+			// via schema
 			"File:secret-doc#canView@User:Bob",
 			"File:secret-doc#canEdit@User:Alice",
 			"File:secret-doc#canView@User:Alice",
 
 			// canEdit is a direct tuple, visible in non-strict mode
 			"File:secret-doc#canEdit@User:Eve",
-			// canView is visible via OPL rewrite in non-strict mode
+			// canView is visible via schema rewrite in non-strict mode
 			"File:secret-doc#canView@User:Eve",
 		},
 		expectedNonMembers: []string{},
@@ -442,17 +463,11 @@ func TestEngine(t *testing.T) {
 var widthLimitScenario = testhelpers.Scenario{
 	Name:           "Width Limit",
 	OrderedShardID: true,
-	Opl: `
-		class User implements Namespace {}
-		class Group implements Namespace {
-			related: {
-				member: (User | SubjectSet<Group, "member">)[]
-			}
-		}
-		class Resource implements Namespace {
-			related: {
-				readers: (User | SubjectSet<Group, "member">)[]
-			}
+	Schema: `
+		namespaces: {
+			User: {}
+			Group: relations: member: types: ["User", "Group#member"]
+			Resource: relations: readers: types: ["User", "Group#member"]
 		}
 	`,
 	//	Resource:doc#readers
@@ -570,30 +585,45 @@ func TestWidthLimit(t *testing.T) {
 // Depth of 5 is needed to reach Alice via deepRel.
 var depthLimitScenario = testhelpers.Scenario{
 	Name: "Depth Limit",
-	Opl: `
-		class User implements Namespace {}
-		class Group implements Namespace {
-			related: {
-				members: (User | SubjectSet<Group, "members">)[]
-			}
-		}
-		class Resource implements Namespace {
-			related: {
-				deepRel: (User | SubjectSet<Group, "members">)[]
-				shortRel: (User | SubjectSet<Group, "members">)[]
-			}
-			permits = {
-				union: (ctx:Context) => 
-						this.related.deepRel.includes(ctx.subject) 
-						|| this.related.shortRel.includes(ctx.subject),
-				intersection: (ctx:Context) => 
-						this.related.deepRel.includes(ctx.subject) 
-						&& this.related.shortRel.includes(ctx.subject),
-				shortButNotDeep: (ctx:Context) => this.related.shortRel.includes(ctx.subject) 
-						&& !this.related.deepRel.includes(ctx.subject),
-
-				// notEither simulates a client that authorizes users when Keto returns NotMember
-				notEither: (ctx:Context) => !this.permits.union(ctx),
+	Schema: `
+		namespaces: {
+			User: {}
+			Group: relations: members: types: ["User", "Group#members"]
+			Resource: {
+				relations: {
+					deepRel: types: ["User", "Group#members"]
+					shortRel: types: ["User", "Group#members"]
+				}
+				permissions: {
+					union: {
+						op: "or"
+						children: [
+							{op: "direct", relation: "deepRel"},
+							{op: "direct", relation: "shortRel"},
+						]
+					}
+					intersection: {
+						op: "and"
+						children: [
+							{op: "direct", relation: "deepRel"},
+							{op: "direct", relation: "shortRel"},
+						]
+					}
+					shortButNotDeep: {
+						op: "and"
+						children: [
+							{op: "direct", relation: "shortRel"},
+							{
+								op: "invert"
+								child: {op: "direct", relation: "deepRel"}
+							},
+						]
+					}
+					notEither: {
+						op: "invert"
+						child: {op: "direct", relation: "union"}
+					}
+				}
 			}
 		}
 	`,
@@ -757,22 +787,16 @@ func TestDepthLimit(t *testing.T) {
 func TestCheckSnapshotIsolation(t *testing.T) {
 	t.Parallel()
 
-	const opl = `
-		class User implements Namespace {}
-		class Folder implements Namespace {
-			related: {
-				members: User[]
+	const schemaSrc = `
+		namespaces: {
+			User: {}
+			Folder: {
+				relations: members: types: ["User"]
+				permissions: isMember: {op: "direct", relation: "members"}
 			}
-			permits = {
-				isMember: (ctx: Context) => this.related.members.includes(ctx.subject),
-			}
-		}
-		class File implements Namespace {
-			related: {
-				parent: Folder[]
-			}
-			permits = {
-				view: (ctx: Context) => this.related.parent.traverse(p => p.permits.isMember(ctx)),
+			File: {
+				relations: parent: types: ["Folder"]
+				permissions: view: {op: "tupleToSubjectSet", tupleSetRelation: "parent", computedSubjectSet: "isMember"}
 			}
 		}
 	`
@@ -800,7 +824,7 @@ func TestCheckSnapshotIsolation(t *testing.T) {
 			t.Parallel()
 
 			reg := driver.NewTestRegistry(t, dsn,
-				driver.WithOPL(opl),
+				driver.WithSchema(schemaSrc),
 				driver.WithMapperNamespace(testhelpers.CustomMapperNamespace),
 				driver.WithConfig(config.KeyFeatureFlagStrictMode, true),
 			)

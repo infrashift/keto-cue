@@ -68,7 +68,7 @@
         "type": "object"
       },
       "checkOplSyntaxBody": {
-        "description": "Ory Permission Language Document",
+        "description": "CUE Permission Schema Document",
         "type": "string"
       },
       "checkOplSyntaxResult": {
@@ -767,7 +767,7 @@
     },
     "/opl/syntax/check": {
       "post": {
-        "description": "The OPL file is expected in the body of the request.",
+        "description": "The CUE schema is expected in the body of the request. The endpoint keeps its OPL name for API compatibility.",
         "operationId": "checkOplSyntax",
         "requestBody": {
           "content": {
@@ -811,7 +811,7 @@
             "description": "errorGeneric"
           }
         },
-        "summary": "Check the syntax of an OPL file",
+        "summary": "Check the syntax of a CUE permission schema",
         "tags": ["relationship"],
         "x-ory-ratelimit-bucket": "keto-admin-medium"
       }

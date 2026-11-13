@@ -3,4 +3,4 @@ log:
   level: trace
 
 namespaces:
-  location: file://./subject-id-to-subjectset-migration/namespaces.ts
+  location: file://./subject-id-to-subjectset-migration/namespaces.cue

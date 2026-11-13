@@ -4,10 +4,12 @@
 package config
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 
@@ -24,8 +26,11 @@ import (
 )
 
 type (
+	// configFiles holds the content of each schema source by its path or URL.
+	// The watcher keeps bytes, not readers, because every change compiles
+	// all sources again.
 	configFiles struct {
-		byPath map[string]io.Reader
+		byPath map[string][]byte
 		sync.Mutex
 	}
 
@@ -33,6 +38,12 @@ type (
 		logger *logrusx.Logger
 		target string
 		files  configFiles
+		// isDir is true when the target is a local directory. Then only the
+		// *.cue files of the directory belong to the schema.
+		isDir bool
+		// ignored records the non-CUE files of a directory target that the
+		// watcher already warned about.
+		ignored map[string]bool
 
 		memoryNamespaceManager
 	}
@@ -58,7 +69,8 @@ func newOPLConfigWatcher(ctx context.Context, l *logrusx.Logger, newFetcher func
 	nw := &oplConfigWatcher{
 		logger:                 l,
 		target:                 target,
-		files:                  configFiles{byPath: make(map[string]io.Reader)},
+		files:                  configFiles{byPath: make(map[string][]byte)},
+		ignored:                make(map[string]bool),
 		memoryNamespaceManager: *NewMemoryNamespaceManager(),
 	}
 
@@ -69,6 +81,9 @@ func newOPLConfigWatcher(ctx context.Context, l *logrusx.Logger, newFetcher func
 
 	switch targetUrl.Scheme {
 	case "file", "":
+		if info, err := os.Stat(targetUrl.Path); err == nil && info.IsDir() { //nolint:gosec // Path is from a validated configuration URL, not user input.
+			nw.isDir = true
+		}
 		return nw, watchTarget(ctx, target, nw, l)
 	case "base64":
 		file, err := newFetcher().FetchContext(ctx, target)
@@ -77,7 +92,8 @@ func newOPLConfigWatcher(ctx context.Context, l *logrusx.Logger, newFetcher func
 		}
 		nw.files.Lock()
 		defer nw.files.Unlock()
-		nw.files.byPath[targetUrl.String()] = file
+		// The base64 URL is not a useful file name in errors.
+		nw.files.byPath[""] = file.Bytes()
 		nw.parseFiles()
 		return nw, err
 	case "http", "https":
@@ -98,7 +114,7 @@ func newOPLConfigWatcher(ctx context.Context, l *logrusx.Logger, newFetcher func
 			b := buf.Bytes()
 			nw.files.Lock()
 			defer nw.files.Unlock()
-			nw.files.byPath[targetUrl.String()] = bytes.NewReader(b)
+			nw.files.byPath[targetUrl.String()] = b
 			namespaces, ok := nw.parseFiles()
 			if !ok {
 				// Cache a parse failure as an empty result, so that a broken
@@ -124,9 +140,14 @@ func newOPLConfigWatcher(ctx context.Context, l *logrusx.Logger, newFetcher func
 func (nw *oplConfigWatcher) handleChange(e *watcherx.ChangeEvent) {
 	// the lock is acquired before parsing to ensure that the getters are
 	// waiting for the updated values
+	content, err := io.ReadAll(e.Reader())
+	if err != nil {
+		nw.logger.WithError(err).Errorf("Could not read schema file %s.", e.Source())
+		return
+	}
 	nw.files.Lock()
 	defer nw.files.Unlock()
-	nw.files.byPath[e.Source()] = e.Reader()
+	nw.files.byPath[e.Source()] = content
 	nw.parseFiles()
 }
 
@@ -144,37 +165,41 @@ func (nw *oplConfigWatcher) handleError(e *watcherx.ErrorEvent) {
 			nw.target)
 }
 
-// parseFiles loops through all files, parsing each and getting the namespaces.
-// It then sets and returns the namespaces only if there were no errors.
+// parseFiles compiles all schema sources as one CUE package. It sets and
+// returns the namespaces only if there were no errors.
 //
-// The caller must  hold the lock to nw.files.
+// The caller must hold the lock to nw.files.
 func (nw *oplConfigWatcher) parseFiles() ([]*namespace.Namespace, bool) {
-	var (
-		namespaces = make([]*namespace.Namespace, 0)
-		errs       []error
-	)
-	for _, reader := range nw.files.byPath {
-		content, err := io.ReadAll(reader)
-		if err != nil {
-			errs = append(errs, err)
+	paths := make([]string, 0, len(nw.files.byPath))
+	for path := range nw.files.byPath {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+
+	sources := make([]schema.SourceFile, 0, len(paths))
+	for _, path := range paths {
+		if nw.isDir && filepath.Ext(path) != ".cue" {
+			if !nw.ignored[path] {
+				nw.ignored[path] = true
+				nw.logger.Warnf("Ignoring the file %s in the schema directory %s: only *.cue files belong to the schema.", path, nw.target)
+			}
 			continue
 		}
-		nn, ee := schema.Parse(string(content))
-		for _, e := range ee {
-			errs = append(errs, e)
-		}
-		for _, n := range nn {
-			namespaces = append(namespaces, &n)
-		}
+		sources = append(sources, schema.SourceFile{Name: path, Content: nw.files.byPath[path]})
 	}
+
+	nn, errs := schema.Parse(sources...)
 	if len(errs) > 0 {
 		for _, err := range errs {
 			nw.logger.
 				WithError(err).
-				Errorf("Failed to parse OPL config files at target %s.",
-					nw.target)
+				Errorf("Failed to parse the schema at target %s.", nw.target)
 		}
 		return nil, false
+	}
+	namespaces := make([]*namespace.Namespace, 0, len(nn))
+	for _, n := range nn {
+		namespaces = append(namespaces, &n)
 	}
 	nw.set(namespaces)
 	return namespaces, true

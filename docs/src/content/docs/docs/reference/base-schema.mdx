@@ -1,0 +1,30 @@
+---
+title: Base Schema
+description: The embedded CUE base schema that keto-cue unifies with each permission schema.
+---
+
+import { Code } from '@astrojs/starlight/components';
+import baseSchema from '../../../../../../schema/cue_base.cue?raw';
+
+The compiler unifies each schema with the base schema below. The base schema
+sets the shape of `namespaces`. Its definitions are closed, so a misspelled
+field is an error. The top level stays open, so a schema can declare its own
+definitions next to `namespaces`.
+
+This page reads `schema/cue_base.cue` when the site builds, so it always
+matches the code.
+
+<Code code={baseSchema} lang="cue" title="schema/cue_base.cue" />
+
+## What the Go compiler checks
+
+The base schema checks the shape of each value. The compiler then checks the
+rules that CUE cannot express well:
+
+- A rewrite node has exactly one of the fields `op`, `or`, `and` and `not`.
+- A rewrite with `op` has the fields of its `op` and no other rewrite fields.
+- A short rewrite is `"relation"` or `"tupleSetRelation->computedSubjectSet"`.
+- Each referenced namespace and relation exists.
+- Rewrites nest to a depth of 10 or less.
+
+[Rules & Errors](../rules-and-errors/) lists each rule with its error.

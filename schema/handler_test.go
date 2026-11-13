@@ -33,13 +33,14 @@ func TestNewHandler(t *testing.T) {
 			response, err := ts.Client().Post(
 				ts.URL+"/opl/syntax/check",
 				"text/plain",
-				bytes.NewBufferString("/* comment???"))
+				bytes.NewBufferString(`namespaces: A: permissions: p: {op: "direct", relation: "x"}`))
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, response.StatusCode)
 			body, err := io.ReadAll(response.Body)
 			require.NoError(t, err)
 			t.Log(string(body))
-			assert.Contains(t, gjson.GetBytes(body, "errors.0.message").String(), "unclosed comment")
+			assert.Equal(t, `namespace "A" did not declare relation "x"`, gjson.GetBytes(body, "errors.0.message").String())
+			assert.EqualValues(t, 1, gjson.GetBytes(body, "errors.0.start.Line").Int(), string(body))
 		})
 	})
 
@@ -51,10 +52,11 @@ func TestNewHandler(t *testing.T) {
 
 		t.Run("method=Syntax.Check", func(t *testing.T) {
 			response, err := client.Check(t.Context(), &opl.CheckRequest{
-				Content: []byte("/* comment???"),
+				Content: []byte("namespaces: {"),
 			})
 			require.NoError(t, err)
-			assert.Contains(t, response.ParseErrors[0].Message, "unclosed comment")
+			require.NotEmpty(t, response.ParseErrors)
+			assert.Contains(t, response.ParseErrors[0].Message, "expected")
 		})
 	})
 }

@@ -1,0 +1,35 @@
+/* keto-cue Starlight theme: a teal accent, for a key in a lock, on a deep
+   slate background.
+
+   Starlight's own theme rules live in a cascade layer, and unlayered rules
+   like these win over layered ones regardless of specificity. A plain :root
+   override of a scale color therefore leaks into light mode as well, so the
+   dark-only values are scoped to data-theme="dark" (which Starlight sets on
+   <html> after resolving "auto"). */
+:root {
+	--sl-content-width: 52rem;
+}
+
+:root[data-theme='dark'] {
+	--sl-color-accent-low: hsl(172, 55%, 13%);
+	--sl-color-accent: hsl(170, 70%, 45%);
+	--sl-color-accent-high: hsl(168, 70%, 82%);
+	--sl-color-black: hsl(215, 35%, 8%);
+	--sl-color-gray-6: hsl(215, 28%, 14%);
+}
+
+:root[data-theme='light'] {
+	--sl-color-accent-low: hsl(170, 60%, 90%);
+	--sl-color-accent: hsl(174, 80%, 26%);
+	--sl-color-accent-high: hsl(176, 70%, 16%);
+}
+
+/* Inline code contrast */
+:root[data-theme='light'] .sl-markdown-content :not(pre) > code {
+	background-color: hsl(170, 30%, 93%);
+	color: hsl(176, 65%, 20%);
+}
+
+.sl-markdown-content table :not(pre) > code {
+	white-space: nowrap;
+}
