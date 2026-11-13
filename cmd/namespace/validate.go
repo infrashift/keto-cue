@@ -25,9 +25,8 @@ import (
 
 func NewValidateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Deprecated: "The legacy namespaces are deprecated. Please use the new Ory Permission Language instead.",
-		Aliases:    []string{"validate"},
-		Use:        "validate-legacy <namespace.yml> [<namespace2.yml> ...] | validate -c <config.yaml>",
+		Deprecated: "The legacy namespaces are deprecated. Use a CUE permission schema and `keto namespace validate` instead.",
+		Use:        "validate-legacy <namespace.yml> [<namespace2.yml> ...] | validate-legacy -c <config.yaml>",
 		Short:      "Validate legacy namespace definitions",
 		Long: `validate-legacy
 Validates namespace definitions. Parses namespace yaml files or configuration

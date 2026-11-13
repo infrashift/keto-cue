@@ -17,7 +17,8 @@ import (
 	"github.com/ory/keto/internal/namespace/ast"
 )
 
-// cueTestCases are CUE ports of the OPL parser test cases.
+// cueTestCases are CUE ports of the former OPL parser test cases. Their
+// snapshots match the ASTs that the OPL parser produced.
 var cueTestCases = []struct{ name, input string }{
 	{"full example", `
 package keto
@@ -153,22 +154,6 @@ func TestParseCUE(t *testing.T) {
 					t.Error(err)
 				}
 				snapshotx.SnapshotT(t, nsMap(ns))
-			})
-		}
-	})
-
-	t.Run("suite=same AST as OPL", func(t *testing.T) {
-		opl := make(map[string]string)
-		for _, tc := range parserTestCases {
-			opl[tc.name] = tc.input
-		}
-		for _, tc := range cueTestCases {
-			t.Run(tc.name, func(t *testing.T) {
-				want, errs := parseOPL(opl[tc.name])
-				require.Empty(t, errs)
-				got, cerrs := Parse(src(tc.input))
-				require.Empty(t, cerrs)
-				assert.Equal(t, nsMap(want), nsMap(got))
 			})
 		}
 	})

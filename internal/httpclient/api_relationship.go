@@ -27,8 +27,8 @@ var (
 type RelationshipApi interface {
 
 	/*
-	 * CheckOplSyntax Check the syntax of an OPL file
-	 * The OPL file is expected in the body of the request.
+	 * CheckOplSyntax Check the syntax of a CUE permission schema
+	 * The CUE schema is expected in the body of the request. The endpoint keeps its OPL name for API compatibility.
 	 * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	 * @return RelationshipApiApiCheckOplSyntaxRequest
 	 */
@@ -128,8 +128,8 @@ func (r RelationshipApiApiCheckOplSyntaxRequest) Execute() (*CheckOplSyntaxResul
 }
 
 /*
- * CheckOplSyntax Check the syntax of an OPL file
- * The OPL file is expected in the body of the request.
+ * CheckOplSyntax Check the syntax of a CUE permission schema
+ * The CUE schema is expected in the body of the request. The endpoint keeps its OPL name for API compatibility.
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @return RelationshipApiApiCheckOplSyntaxRequest
  */

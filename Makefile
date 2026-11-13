@@ -120,12 +120,12 @@ test-docs-samples:
 
 .PHONY: fuzz-test
 fuzz-test:
-	go test -fuzz=FuzzParser -fuzztime=10s ./internal/schema
+	go test -fuzz=FuzzParseCUE -fuzztime=10s ./schema
 
 .PHONY: libfuzzer-fuzz-test
 libfuzzer-fuzz-test: .bin/go114-fuzz-build
 	mkdir -p .fuzzer/fuzz_parser_corpus
-	.bin/go114-fuzz-build -o ./.fuzzer/parser.a -func LibfuzzerFuzzParser ./internal/schema
+	.bin/go114-fuzz-build -o ./.fuzzer/parser.a -func LibfuzzerFuzzParser ./schema
 	clang -fsanitize=fuzzer ./.fuzzer/parser.a -o ./.fuzzer/parser
 	./.fuzzer/parser -use_value_profile=1 -timeout=1 ./.fuzzer/fuzz_parser_corpus ./.fuzzer/fuzz_parser_seeds
 
@@ -134,7 +134,7 @@ libfuzzer-fuzz-test-minimize: .bin/go114-fuzz-build
 	mkdir -p .fuzzer/fuzz_parser_corpus
 	mv .fuzzer/fuzz_parser_corpus .fuzzer/fuzz_parser_old_corpus
 	mkdir -p .fuzzer/fuzz_parser_corpus
-	.bin/go114-fuzz-build -o ./.fuzzer/parser.a -func LibfuzzerFuzzParser ./internal/schema
+	.bin/go114-fuzz-build -o ./.fuzzer/parser.a -func LibfuzzerFuzzParser ./schema
 	clang -fsanitize=fuzzer ./.fuzzer/parser.a -o ./.fuzzer/parser
 	./.fuzzer/parser -runs=0 -merge=1 ./.fuzzer/fuzz_parser_corpus ./.fuzzer/fuzz_parser_seeds ./.fuzzer/fuzz_parser_old_corpus
 

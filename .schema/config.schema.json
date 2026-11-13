@@ -298,7 +298,7 @@
         },
         "opl": {
           "type": "object",
-          "title": "Ory Permission Language Syntax API (http and gRPC)",
+          "title": "Permission Schema Syntax API (http and gRPC)",
           "additionalProperties": false,
           "properties": {
             "port": {

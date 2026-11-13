@@ -1,0 +1,25 @@
+package keto
+
+// Declare each namespace as a field of `namespaces`. A namespace can declare
+// relations and permissions. A permission is a subject-set rewrite.
+//
+// Examples:
+//
+//	File: {
+//		relations: {
+//			parents: types: ["File", "Folder"]
+//			viewers: types: ["User", "Group#members"]
+//		}
+//		permissions: view: {
+//			op: "or"
+//			children: [
+//				{op: "direct", relation: "viewers"},
+//				{op: "tupleToSubjectSet", tupleSetRelation: "parents", computedSubjectSet: "view"},
+//			]
+//		}
+//	}
+namespaces: {
+{{- range .Namespaces }}
+	{{ . }}: {}
+{{- end }}
+}

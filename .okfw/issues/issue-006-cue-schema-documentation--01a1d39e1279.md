@@ -5,17 +5,17 @@ type: "Issue"
 kind: "issue"
 tags:
   - "issue"
-  - "open"
   - "phase-5"
   - "docs"
+  - "in-progress"
 created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:35:14-06:00"
+timestamp: "2026-11-13T01:26:34-06:00"
 description: "Document the CUE permission schema and mark the OPL documents as superseded."
 ---
 
 # ISSUE-006: CUE schema documentation
 
-**Status:** Open. **Phase:** 5.
+**Status:** In progress. **Phase:** 5.
 
 ## Description
 Document the CUE permission schema and mark the OPL documents as superseded.

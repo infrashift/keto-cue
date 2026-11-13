@@ -4,7 +4,7 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**CheckOplSyntax**](RelationshipApi.md#CheckOplSyntax) | **Post** /opl/syntax/check | Check the syntax of an OPL file
+[**CheckOplSyntax**](RelationshipApi.md#CheckOplSyntax) | **Post** /opl/syntax/check | Check the syntax of a CUE permission schema
 [**CreateRelationship**](RelationshipApi.md#CreateRelationship) | **Put** /admin/relation-tuples | Create a Relationship
 [**DeleteRelationships**](RelationshipApi.md#DeleteRelationships) | **Delete** /admin/relation-tuples | Delete Relationships
 [**GetRelationships**](RelationshipApi.md#GetRelationships) | **Get** /relation-tuples | Query relationships
@@ -17,7 +17,7 @@ Method | HTTP request | Description
 
 > CheckOplSyntaxResult CheckOplSyntax(ctx).Body(body).Execute()
 
-Check the syntax of an OPL file
+Check the syntax of a CUE permission schema
 
 
 

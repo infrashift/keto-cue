@@ -88,7 +88,7 @@ Class | Method | HTTP request | Description
 *PermissionApi* | [**ExpandPermissions**](docs/PermissionApi.md#expandpermissions) | **Get** /relation-tuples/expand | Expand a Relationship into permissions.
 *PermissionApi* | [**PostCheckPermission**](docs/PermissionApi.md#postcheckpermission) | **Post** /relation-tuples/check/openapi | Check a permission
 *PermissionApi* | [**PostCheckPermissionOrError**](docs/PermissionApi.md#postcheckpermissionorerror) | **Post** /relation-tuples/check | Check a permission
-*RelationshipApi* | [**CheckOplSyntax**](docs/RelationshipApi.md#checkoplsyntax) | **Post** /opl/syntax/check | Check the syntax of an OPL file
+*RelationshipApi* | [**CheckOplSyntax**](docs/RelationshipApi.md#checkoplsyntax) | **Post** /opl/syntax/check | Check the syntax of a CUE permission schema
 *RelationshipApi* | [**CreateRelationship**](docs/RelationshipApi.md#createrelationship) | **Put** /admin/relation-tuples | Create a Relationship
 *RelationshipApi* | [**DeleteRelationships**](docs/RelationshipApi.md#deleterelationships) | **Delete** /admin/relation-tuples | Delete Relationships
 *RelationshipApi* | [**GetRelationships**](docs/RelationshipApi.md#getrelationships) | **Get** /relation-tuples | Query relationships

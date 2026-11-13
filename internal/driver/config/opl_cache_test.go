@@ -80,7 +80,7 @@ func TestOPLConfigWatcher(t *testing.T) {
 
 	t.Run("deduplicates concurrent fetches", func(t *testing.T) {
 		const parallel = 5
-		const target = "https://opl.invalid/namespaces.ts"
+		const target = "https://opl.invalid/namespaces.cue"
 		// The cache is process-global and outlives the test binary's runs.
 		cache.Del(target)
 		// The config warms package-level caches whose goroutines live outside

@@ -538,3 +538,37 @@ func disjunctionMessage(path []string, v cue.Value) string {
 	}
 	return fmt.Sprintf("%s: %v is not allowed; use %s", strings.Join(path, "."), v, allowed)
 }
+
+// simplifyExpression rewrites the expression to use n-ary set operations
+// instead of binary ones.
+func simplifyExpression(root *ast.SubjectSetRewrite) *ast.SubjectSetRewrite {
+	if root == nil {
+		return nil
+	}
+	var newChildren []ast.Child
+	for _, child := range root.Children {
+		switch ch := child.(type) {
+		case *ast.SubjectSetRewrite:
+			simplifyExpression(ch)
+			if len(ch.Children) == 1 || ch.Operation == root.Operation {
+				// Flatten the child to parent, when:
+				// - it's a single-element wrapper (AND(OR(A)) ≡ AND(A))
+				// - shares the root's operation (OR(OR(A,B),C) ≡ OR(A,B,C)).
+				newChildren = append(newChildren, ch.Children...)
+				continue
+			}
+			newChildren = append(newChildren, child)
+		case *ast.InvertResult:
+			if innerCh, ok := ch.Child.(*ast.SubjectSetRewrite); ok {
+				simplifyExpression(innerCh)
+			}
+			newChildren = append(newChildren, child)
+		default:
+			// Leaf node or different operation with multiple children; keep as-is.
+			newChildren = append(newChildren, child)
+		}
+	}
+	root.Children = newChildren
+
+	return root
+}

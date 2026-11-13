@@ -32,6 +32,7 @@ Upstream Keto reads the Ory Permission Language (OPL), a TypeScript-like syntax.
 - Existing OPL schemas do not load. Users convert them with the CUE formatter (`FormatCUE`) or by hand.
 - About 126 OPL fixtures in the engine tests change to CUE. Only test files change in `internal/check` and `internal/expand`.
 - The endpoint name `/opl/syntax/check` no longer matches the language. The name stays for API stability.
+- Phase 4 removed the OPL lexer, parser, type checks, fuzz corpus, snapshots and `contrib/namespace-type-lib/`. The npm manifests no longer reference `@ory/keto-namespace-types`.
 
 ## Alternatives considered
 - **Dispatch on the `.cue` extension and keep OPL.** Rejected by the user. The fork has one schema language.

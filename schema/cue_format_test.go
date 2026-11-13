@@ -4,92 +4,23 @@
 package schema
 
 import (
-	"encoding/json"
-	goast "go/ast"
-	goparser "go/parser"
-	gotoken "go/token"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	keto "github.com/ory/keto/internal/namespace/ast"
+	"github.com/ory/keto/internal/namespace/ast"
 )
 
-// oplFixtures collects every OPL schema in the repository: the parser test
-// cases, the .ts files, the CLI snapshots and the string literals in Go test
-// files.
-func oplFixtures(t *testing.T) map[string]string {
-	t.Helper()
-	fixtures := make(map[string]string)
-	for _, tc := range parserTestCases {
-		fixtures["parser_test.go/"+tc.name] = tc.input
-	}
-
-	root := ".."
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			switch d.Name() {
-			case "node_modules", ".git", "namespace-type-lib", "gen", "docs":
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		switch {
-		case strings.HasSuffix(path, ".ts"):
-			b, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			if strings.Contains(string(b), "implements Namespace") {
-				fixtures[path] = string(b)
-			}
-		case strings.HasSuffix(path, ".json") && strings.Contains(path, filepath.Join("cmd", "namespace", ".snapshots")):
-			b, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			var s string
-			if json.Unmarshal(b, &s) == nil && strings.Contains(s, "implements Namespace") {
-				fixtures[path] = s
-			}
-		case strings.HasSuffix(path, "_test.go") && !strings.HasPrefix(path, filepath.Join("..", "schema")):
-			f, err := goparser.ParseFile(gotoken.NewFileSet(), path, nil, goparser.SkipObjectResolution)
-			if err != nil {
-				return err
-			}
-			i := 0
-			goast.Inspect(f, func(n goast.Node) bool {
-				lit, ok := n.(*goast.BasicLit)
-				if !ok || lit.Kind != gotoken.STRING || !strings.Contains(lit.Value, "implements Namespace") {
-					return true
-				}
-				s, err := strconv.Unquote(lit.Value)
-				require.NoError(t, err)
-				i++
-				fixtures[path+"#"+strconv.Itoa(i)] = s
-				return true
-			})
-		}
-		return nil
-	})
-	require.NoError(t, err)
-	return fixtures
-}
-
-func normalize(ns []namespace) map[string]map[string]keto.Relation {
-	m := make(map[string]map[string]keto.Relation)
+func normalize(ns []namespace) map[string]map[string]ast.Relation {
+	m := make(map[string]map[string]ast.Relation)
 	for _, n := range ns {
 		if m[n.Name] == nil {
-			m[n.Name] = make(map[string]keto.Relation)
+			m[n.Name] = make(map[string]ast.Relation)
 		}
 		for _, r := range n.Relations {
 			m[n.Name][r.Name] = r
@@ -98,23 +29,33 @@ func normalize(ns []namespace) map[string]map[string]keto.Relation {
 	return m
 }
 
-func TestFormatCUEEquivalence(t *testing.T) {
-	fixtures := oplFixtures(t)
-	var roundTrips, invalid int
+// TestFormatCUERoundTrip checks Parse -> FormatCUE -> Parse for the test cases
+// and every schema in the repository. Phase 2 of the migration ran the same
+// check from OPL for all 62 OPL fixtures.
+func TestFormatCUERoundTrip(t *testing.T) {
+	inputs := make(map[string]string)
+	for _, tc := range cueTestCases {
+		inputs[tc.name] = tc.input
+	}
+	for _, dir := range []string{"../contrib", "../internal/check/testfixtures"} {
+		require.NoError(t, filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() || filepath.Ext(path) != ".cue" {
+				return err
+			}
+			b, err := os.ReadFile(path)
+			inputs[path] = string(b)
+			return err
+		}))
+	}
 
-	for name, input := range fixtures {
-		want, errs := parseOPL(input)
-		if len(errs) > 0 {
-			// An OPL error fixture has no AST to compare.
-			invalid++
-			continue
-		}
-		roundTrips++
+	for name, input := range inputs {
 		t.Run(name, func(t *testing.T) {
+			want, errs := Parse(SourceFile{Name: "input.cue", Content: []byte(input)})
+			require.Empty(t, errs)
 			out, err := FormatCUE(want)
 			require.NoError(t, err)
-			got, cerrs := Parse(SourceFile{Name: "formatted.cue", Content: out})
-			for _, e := range cerrs {
+			got, errs := Parse(SourceFile{Name: "formatted.cue", Content: out})
+			for _, e := range errs {
 				t.Error(e)
 			}
 			if !assert.Equal(t, normalize(want), normalize(got)) {
@@ -122,14 +63,10 @@ func TestFormatCUEEquivalence(t *testing.T) {
 			}
 		})
 	}
-
-	// Phase 2 checked all 62 OPL fixtures. Phase 3 converted most of them
-	// to CUE, so the scan finds fewer now.
-	t.Logf("OPL fixtures: %d round trips, %d invalid OPL inputs", roundTrips, invalid)
 }
 
 func TestFormatCUE(t *testing.T) {
-	ns, errs := parseOPL(parserTestCases[0].input)
+	ns, errs := Parse(SourceFile{Name: "input.cue", Content: []byte(cueTestCases[0].input)})
 	require.Empty(t, errs)
 	out, err := FormatCUE(ns)
 	require.NoError(t, err)

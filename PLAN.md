@@ -45,10 +45,10 @@ Tracking: [ISSUE-004](.okfw/issues/issue-004-load-cue-schemas-in-the-server-and-
 ## Phase 4: Migrate the fixtures and remove OPL
 Tracking: [ISSUE-005](.okfw/issues/issue-005-migrate-the-fixtures-and-remove-opl--01a1d39e1273.md)
 
-- [ ] Delete the lexer, the parser, the fuzz corpus, the lexer and parser snapshots and `contrib/namespace-type-lib/`.
-- [ ] Add `FuzzParseCUE`. Keep `Test_simplify`.
-- [ ] Replace `GenerateOPLConfig` with `GenerateCUEConfig`.
-- [ ] Add `keto namespace validate <file.cue|dir>`. Keep the legacy command as `validate-legacy`.
+- [x] Delete the lexer, the parser, the fuzz corpus, the lexer and parser snapshots and `contrib/namespace-type-lib/`.
+- [x] Add `FuzzParseCUE`. Keep `Test_simplify`.
+- [x] Replace `GenerateOPLConfig` with `GenerateCUEConfig`.
+- [x] Add `keto namespace validate <file.cue|dir>`. Keep the legacy command as `validate-legacy`.
 
 ## Phase 5: CUE schema documentation
 Tracking: [ISSUE-006](.okfw/issues/issue-006-cue-schema-documentation--01a1d39e1279.md)

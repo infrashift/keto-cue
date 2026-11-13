@@ -3,6 +3,44 @@
 
 package schema
 
+import (
+	internalNamespace "github.com/ory/keto/internal/namespace"
+	"github.com/ory/keto/internal/namespace/ast"
+)
+
+type namespace = internalNamespace.Namespace
+
+type (
+	namespaceQuery []namespace
+	relationQuery  []ast.Relation
+)
+
+func (ns namespaceQuery) find(name string) (*namespace, bool) {
+	for _, n := range ns {
+		if n.Name == name {
+			return &n, true
+		}
+	}
+	return nil, false
+}
+
+func (ns namespaceQuery) findRelation(namespace, relation string) (*ast.Relation, bool) {
+	n, ok := ns.find(namespace)
+	if !ok {
+		return nil, false
+	}
+	return relationQuery(n.Relations).find(relation)
+}
+
+func (rs relationQuery) find(name string) (*ast.Relation, bool) {
+	for _, r := range rs {
+		if r.Name == name {
+			return &r, true
+		}
+	}
+	return nil, false
+}
+
 // typeCheck verifies the references that the compiler recorded. The checks and
 // their messages follow the OPL type checks.
 func (c *cueCompiler) typeCheck() {
