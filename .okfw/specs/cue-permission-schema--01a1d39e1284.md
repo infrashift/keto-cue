@@ -71,9 +71,13 @@ namespaces: Doc: permissions: view: #viaMember & {_rel: "readers"}
 ## Errors
 Each error names the file, the line and the column ([ADR-0005](/decisions/adr-0005-parse-errors-carry-the-file-name-and-1-based-positions--01a1d3adf8cf.md)). The compiler reports CUE errors first. It runs the reference checks only when the schema has no CUE errors.
 
+## User documentation
+[docs/cue_permission_schema.md](https://github.com/infrashift/keto-cue/blob/master/docs/cue_permission_schema.md) is the user guide. It has the OPL to CUE table and the limits of the syntax check.
+
 ## Rules
 - The compiler wraps a top-level leaf in a rewrite and flattens nested operations of the same kind.
 - Relations come first in the AST, then permissions. Each group keeps the declaration order.
 - A name in both `relations` and `permissions` is an error.
 - Each referenced namespace and relation exists. The compiler reports each missing reference.
 - Rewrites nest to a depth of 10 or less.
+- A value that matches no alternative of a base-schema disjunction gives one error. The error names the allowed values.

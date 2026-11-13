@@ -399,6 +399,18 @@ func TestParseCUEErrors(t *testing.T) {
 	}
 }
 
+func TestParseDisjunctionErrorIsSingle(t *testing.T) {
+	_, errs := Parse(src("namespaces: A: {\n\tpermissions: p: {op: \"xor\"}\n}\n"))
+	require.Len(t, errs, 1)
+	assert.Equal(t, `namespaces.A.permissions.p.op: "xor" is not allowed; use "or", "and", "direct", "tupleToSubjectSet" or "invert"`, errs[0].Message())
+	assert.Equal(t, 2, errs[0].Start().Line)
+	assert.Equal(t, 23, errs[0].Start().Col)
+
+	_, errs = Parse(src(`namespaces: A: relations: r: types: ["A#b#c"]`))
+	require.Len(t, errs, 1)
+	assert.Contains(t, errs[0].Message(), `"A#b#c" is not allowed`)
+}
+
 func TestParseErrorFormat(t *testing.T) {
 	_, errs := Parse(src(`namespaces: A: {
 	relations: r: types: ["A"]

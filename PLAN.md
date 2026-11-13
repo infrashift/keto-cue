@@ -53,8 +53,8 @@ Tracking: [ISSUE-005](.okfw/issues/issue-005-migrate-the-fixtures-and-remove-opl
 ## Phase 5: CUE schema documentation
 Tracking: [ISSUE-006](.okfw/issues/issue-006-cue-schema-documentation--01a1d39e1279.md)
 
-- [ ] Write `docs/cue_permission_schema.md` with an OPL to CUE table.
-- [ ] Mark `docs/ory_permission_language_spec.md` as superseded. Update the OPL examples in `README.md`.
+- [x] Write `docs/cue_permission_schema.md` with an OPL to CUE table.
+- [x] Mark `docs/ory_permission_language_spec.md` as superseded. Update the OPL examples in `README.md`.
 
 ## Verification
 Run these gates after each phase. Do not start the next phase while a gate fails.

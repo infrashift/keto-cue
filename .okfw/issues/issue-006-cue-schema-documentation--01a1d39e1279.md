@@ -7,22 +7,25 @@ tags:
   - "issue"
   - "phase-5"
   - "docs"
-  - "in-progress"
+  - "closed"
 created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T01:26:34-06:00"
+timestamp: "2026-11-13T01:28:43-06:00"
 description: "Document the CUE permission schema and mark the OPL documents as superseded."
 ---
 
 # ISSUE-006: CUE schema documentation
 
-**Status:** In progress. **Phase:** 5.
+**Status:** Closed. **Phase:** 5.
 
 ## Description
 Document the CUE permission schema and mark the OPL documents as superseded.
 
 ## Acceptance Criteria
-- [ ] `docs/cue_permission_schema.md` exists and passes `make docs-style`
-- [ ] `docs/ory_permission_language_spec.md` and `README.md` point to the CUE document
+- [x] `docs/cue_permission_schema.md` exists and passes `make docs-style`
+- [x] `docs/ory_permission_language_spec.md` and `README.md` point to the CUE document
+
+## Resolution
+Phase 5 is done. `docs/cue_permission_schema.md` documents the schema, the OPL to CUE table, validation and the syntax-check limits. `README.md` has a fork notice with a CUE example. `docs/ory_permission_language_spec.md` has a superseded notice.
 
 ## Notes
 Follow the [Development workflow](/development-workflow--01a1d39e1245.md).

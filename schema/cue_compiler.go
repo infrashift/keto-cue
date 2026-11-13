@@ -464,10 +464,25 @@ func toSourcePos(p token.Pos) ketoapi.SourcePosition {
 // addCUEErr converts a CUE error list into parse errors. Each error takes the
 // first position that is in a user file.
 func (c *cueCompiler) addCUEErr(err error) {
+	errs := cueerrors.Errors(err)
+
+	// CUE reports an empty disjunction once as a summary and once per
+	// alternative. The summary becomes one clear message, so drop the
+	// per-alternative conflicts at the same path.
+	disjunctions := make(map[string]bool)
+	for _, e := range errs {
+		if format, _ := e.Msg(); strings.Contains(format, "empty disjunction") {
+			disjunctions[strings.Join(e.Path(), ".")] = true
+		}
+	}
+
 	seen := make(map[string]bool)
-	for _, e := range cueerrors.Errors(err) {
+	for _, e := range errs {
 		e = cueerrors.Sanitize(e)
 		format, args := e.Msg()
+		if disjunctions[strings.Join(e.Path(), ".")] && !strings.Contains(format, "empty disjunction") {
+			continue
+		}
 		msg := fmt.Sprintf(format, args...)
 		if path := e.Path(); len(path) > 0 {
 			msg = strings.Join(path, ".") + ": " + msg

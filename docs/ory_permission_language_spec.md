@@ -1,5 +1,10 @@
 # The "Ory Permission Language" Specification
 
+> **Superseded in keto-cue.** This fork reads permission schemas in CUE, not in
+> OPL. See the [CUE permission schema](cue_permission_schema.md). This document
+> stays for reference: it describes the OPL that Ory Keto and the Ory Network
+> read.
+
 Enforcing fine-grained permissions is a critical building block of mature
 technology solutions that protect privacy and identity in the information age.
 Several proprietary languages to represent permission already exist, namely the

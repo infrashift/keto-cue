@@ -15,6 +15,30 @@ Ory Keto is the first and most popular open source implementation of "Zanzibar:
 Google's Consistent, Global Authorization System". It provides a scalable,
 performant authorization server for managing permissions at scale.
 
+> **keto-cue fork.** This repository is a fork of Ory Keto that reads
+> permission schemas in [CUE](https://cuelang.org) instead of the Ory
+> Permission Language (OPL). The check and expand engines, the storage and the
+> APIs are the same. See the [CUE permission schema](docs/cue_permission_schema.md)
+> document. A self-hosted keto-cue server loads a schema like this:
+>
+> ```shell
+> cat > schema.cue <<'CUE'
+> namespaces: {
+> 	User: {}
+> 	Document: {
+> 		relations: readers: types: ["User"]
+> 		permissions: read: {op: "direct", relation: "readers"}
+> 	}
+> }
+> CUE
+> keto namespace validate schema.cue
+> echo 'namespaces: {location: "file://./schema.cue"}' > keto.yml
+> keto serve -c keto.yml
+> ```
+>
+> The Ory Network examples below still use OPL, because the Ory Network reads
+> OPL.
+
 ---
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
@@ -48,7 +72,7 @@ Global Authorization System". It follows
 and focuses on:
 
 - Scalable permission checks based on the Zanzibar model
-- The Ory Permission Language for defining access control policies
+- CUE permission schemas for defining access control policies (keto-cue)
 - Relationship-based access control (ReBAC)
 - Low latency permission checks (sub-10ms)
 - Horizontal scaling to billions of relationships
@@ -64,7 +88,7 @@ Ory Keto is designed to:
 
 - Implement Google's Zanzibar authorization model at scale
 - Provide low-latency permission checks for billions of relationships
-- Support the Ory Permission Language for flexible access control
+- Support CUE permission schemas for flexible access control (keto-cue)
 - Work with any identity provider through integration points
 - Scale horizontally without effort
 - Fit into modern cloud native environments such as Kubernetes and managed

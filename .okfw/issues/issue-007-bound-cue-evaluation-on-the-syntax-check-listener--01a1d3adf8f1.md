@@ -5,17 +5,17 @@ type: "Issue"
 kind: "issue"
 tags:
   - "issue"
-  - "open"
   - "phase-3"
   - "security"
+  - "closed"
 created: "2026-11-13T00:52:36-06:00"
-timestamp: "2026-11-13T00:52:36-06:00"
+timestamp: "2026-11-13T01:29:33-06:00"
 description: "CUE evaluation has no time or memory bound, and the syntax-check listener accepts schemas from clients."
 ---
 
 # ISSUE-007: Bound CUE evaluation on the syntax-check listener
 
-**Status:** Open. **Phase:** 3. The handler limits are done. The document item waits for Phase 5.
+**Status:** Closed. **Phase:** 3. The handler limits are done. The document item waits for Phase 5.
 
 ## Description
 CUE evaluation has no time or memory bound. A schema with nested comprehensions or a large `list.Range` can use much CPU and memory. The syntax-check listener accepts schemas from clients, so a client can send such a schema. Schemas from the config file come from the operator.
@@ -24,7 +24,10 @@ CUE evaluation has no time or memory bound. A schema with nested comprehensions 
 - [x] The syntax-check handler caps the request body at 1 MiB (HTTP 413, gRPC `ResourceExhausted`).
 - [x] The syntax-check handler limits the concurrent evaluations to `GOMAXPROCS` (HTTP 429, gRPC `ResourceExhausted`).
 - [x] The syntax-check handler returns an error when an evaluation exceeds 10 seconds (HTTP 408, gRPC `DeadlineExceeded`).
-- [ ] The CUE schema document states the remaining risk for memory use.
+- [x] The CUE schema document states the remaining risk for memory use.
+
+## Resolution
+The handler limits shipped in Phase 3. `docs/cue_permission_schema.md` states the remaining memory risk and recommends access control on the syntax-check listener.
 
 ## Notes
 - Go cannot stop a running CUE evaluation. A timed-out evaluation keeps its slot until it ends, so the concurrency limit also bounds the CPU use.
