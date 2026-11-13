@@ -163,3 +163,32 @@ licenses: .bin/licenses node_modules  # checks open-source licenses
 node_modules: package-lock.json
 	npm ci
 	touch node_modules
+
+# --- keto-cue gates (see CLAUDE.md) -------------------------------------------
+
+CUE_PKGS = ./schema/... ./internal/namespace/... ./internal/driver/config/... ./cmd/namespace/... ./internal/testhelpers/...
+ENGINE_PKGS = ./internal/check/... ./internal/expand/...
+CUE_DIRS = schema internal/namespace internal/driver/config cmd/namespace internal/testhelpers
+
+.PHONY: lint test-cue wiki docs-style check
+
+## lint: check gofmt and run go vet on the keto-cue packages
+lint:
+	@test -z "$$(gofmt -l $(CUE_DIRS))" || { echo "gofmt needed:"; gofmt -l $(CUE_DIRS); exit 1; }
+	go vet $(CUE_PKGS)
+
+## test-cue: run the schema, config and engine tests
+test-cue:
+	go test $(CUE_PKGS) $(ENGINE_PKGS)
+
+## wiki: validate the OKF wiki
+wiki:
+	okfw validate --all
+	okfw validate --okf
+
+## docs-style: check the keto-cue documents against ASD-STE100 rules
+docs-style:
+	python3 -I scripts/ste-check.py
+
+## check: run all keto-cue gates
+check: lint test-cue wiki docs-style
