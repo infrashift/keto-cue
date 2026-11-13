@@ -16,9 +16,9 @@ import (
 	"github.com/ory/keto/schema"
 )
 
-func newRegistryForOPL(t *testing.T, opl string, opts ...driver.TestRegistryOption) *driver.RegistryDefault {
+func newRegistryForSchema(t *testing.T, schemaSrc string, opts ...driver.TestRegistryOption) *driver.RegistryDefault {
 	t.Helper()
-	parsed, errs := schema.Parse(opl)
+	parsed, errs := schema.Parse(schema.SourceFile{Name: "schema.cue", Content: []byte(schemaSrc)})
 	require.Empty(t, errs)
 	nss := make([]*namespace.Namespace, len(parsed))
 	for i := range parsed {
@@ -48,7 +48,7 @@ func TestCallLimit(t *testing.T) {
 
 	for _, tc := range []struct {
 		name      string
-		opl       string
+		schemaSrc       string
 		opts      []driver.TestRegistryOption
 		tuples    []string
 		check     string
@@ -57,14 +57,21 @@ func TestCallLimit(t *testing.T) {
 	}{
 		{
 			name: "invert cycle aborts regardless of configured depth",
-			opl: `
-				class User implements Namespace {}
-				class Resource implements Namespace {
-					permits = {
-						edit: (ctx: Context): boolean => !this.permits.view(ctx),
-						view: (ctx: Context): boolean => !this.permits.edit(ctx),
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Resource: permissions: {
+						edit: {
+							op: "invert"
+							child: {op: "direct", relation: "view"}
+						}
+						view: {
+							op: "invert"
+							child: {op: "direct", relation: "edit"}
+						}
 					}
-				}`,
+				}
+			`,
 			opts:      []driver.TestRegistryOption{driver.WithConfig("limit.max_read_depth", 65535)},
 			check:     "Resource:doc#edit@User:alice",
 			restDepth: 65535,
@@ -72,47 +79,89 @@ func TestCallLimit(t *testing.T) {
 		},
 		{
 			name: "branching cycle aborts decisively",
-			opl: `
-				class User implements Namespace {}
-				class R implements Namespace {
-					permits = {
-						a: (ctx: Context): boolean => this.permits.b(ctx) && this.permits.c(ctx),
-						b: (ctx: Context): boolean => this.permits.a(ctx) && this.permits.a(ctx),
-						c: (ctx: Context): boolean => this.permits.a(ctx) && this.permits.a(ctx),
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					R: permissions: {
+						a: {
+							op: "and"
+							children: [
+								{op: "direct", relation: "b"},
+								{op: "direct", relation: "c"},
+							]
+						}
+						b: {
+							op: "and"
+							children: [
+								{op: "direct", relation: "a"},
+								{op: "direct", relation: "a"},
+							]
+						}
+						c: {
+							op: "and"
+							children: [
+								{op: "direct", relation: "a"},
+								{op: "direct", relation: "a"},
+							]
+						}
 					}
-				}`,
+				}
+			`,
 			check:     "R:x#a@User:u",
 			restDepth: 5,
 			want:      cyclicError,
 		},
 		{
 			name: "self-loop is bounded by RestDepth",
-			opl: `
-				class User implements Namespace {}
-				class Resource implements Namespace {
-					permits = {
-						edit: (ctx: Context): boolean => this.permits.edit(ctx),
-					}
-				}`,
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Resource: permissions: edit: {op: "direct", relation: "edit"}
+				}
+			`,
 			check:     "Resource:doc#edit@User:alice",
 			restDepth: 5,
 			want:      depthLimited,
 		},
 		{
 			name: "legit role chain resolves",
-			opl: `
-				class User implements Namespace {}
-				class Doc implements Namespace {
-					related: {
-						l0: User[]; l1: User[]; l2: User[]; l3: User[];
+			schemaSrc: `
+				namespaces: {
+					User: {}
+					Doc: {
+						relations: {
+							l0: types: ["User"]
+							l1: types: ["User"]
+							l2: types: ["User"]
+							l3: types: ["User"]
+						}
+						permissions: {
+							p0: {
+								op: "or"
+								children: [
+									{op: "direct", relation: "p1"},
+									{op: "direct", relation: "l0"},
+								]
+							}
+							p1: {
+								op: "or"
+								children: [
+									{op: "direct", relation: "p2"},
+									{op: "direct", relation: "l1"},
+								]
+							}
+							p2: {
+								op: "or"
+								children: [
+									{op: "direct", relation: "p3"},
+									{op: "direct", relation: "l2"},
+								]
+							}
+							p3: {op: "direct", relation: "l3"}
+						}
 					}
-					permits = {
-						p0: (ctx: Context): boolean => this.permits.p1(ctx) || this.related.l0.includes(ctx.subject),
-						p1: (ctx: Context): boolean => this.permits.p2(ctx) || this.related.l1.includes(ctx.subject),
-						p2: (ctx: Context): boolean => this.permits.p3(ctx) || this.related.l2.includes(ctx.subject),
-						p3: (ctx: Context): boolean => this.related.l3.includes(ctx.subject),
-					}
-				}`,
+				}
+			`,
 			tuples:    []string{"Doc:d#l3@User:alice"},
 			check:     "Doc:d#p0@User:alice",
 			restDepth: 5,
@@ -122,7 +171,7 @@ func TestCallLimit(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			reg := newRegistryForOPL(t, tc.opl, tc.opts...)
+			reg := newRegistryForSchema(t, tc.schemaSrc, tc.opts...)
 			if len(tc.tuples) > 0 {
 				testhelpers.MapAndInsertTuplesFromString(t, reg, tc.tuples)
 			}

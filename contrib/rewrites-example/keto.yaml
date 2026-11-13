@@ -1,7 +1,7 @@
 dsn: memory
 
 namespaces:
-  location: file://./namespaces.keto.ts
+  location: file://./namespaces.cue
 
 log:
   level: trace

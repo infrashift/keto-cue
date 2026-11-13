@@ -4,6 +4,9 @@
 package schema
 
 import (
+	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -145,7 +148,7 @@ func TestParseCUE(t *testing.T) {
 	t.Run("suite=snapshots", func(t *testing.T) {
 		for _, tc := range cueTestCases {
 			t.Run(tc.name, func(t *testing.T) {
-				ns, errs := ParseCUE(src(tc.input))
+				ns, errs := Parse(src(tc.input))
 				for _, err := range errs {
 					t.Error(err)
 				}
@@ -161,9 +164,9 @@ func TestParseCUE(t *testing.T) {
 		}
 		for _, tc := range cueTestCases {
 			t.Run(tc.name, func(t *testing.T) {
-				want, errs := Parse(opl[tc.name])
+				want, errs := parseOPL(opl[tc.name])
 				require.Empty(t, errs)
-				got, cerrs := ParseCUE(src(tc.input))
+				got, cerrs := Parse(src(tc.input))
 				require.Empty(t, cerrs)
 				assert.Equal(t, nsMap(want), nsMap(got))
 			})
@@ -171,7 +174,7 @@ func TestParseCUE(t *testing.T) {
 	})
 
 	t.Run("case=keeps declaration order of namespaces and relations", func(t *testing.T) {
-		ns, errs := ParseCUE(src(`
+		ns, errs := Parse(src(`
 namespaces: {
 	Z: relations: {b: types: ["A"], a: types: ["A"]}
 	A: permissions: {y: {op: "direct", relation: "x"}, x: {op: "direct", relation: "y"}}
@@ -184,16 +187,16 @@ namespaces: {
 	})
 
 	t.Run("case=empty schema", func(t *testing.T) {
-		ns, errs := ParseCUE(src("package keto\n"))
+		ns, errs := Parse(src("package keto\n"))
 		assert.Empty(t, errs)
 		assert.Empty(t, ns)
-		ns, errs = ParseCUE()
+		ns, errs = Parse()
 		assert.Empty(t, errs)
 		assert.Empty(t, ns)
 	})
 
 	t.Run("case=relation with types and rewrite", func(t *testing.T) {
-		ns, errs := ParseCUE(src(`
+		ns, errs := Parse(src(`
 namespaces: {
 	User: {}
 	Doc: relations: {
@@ -208,7 +211,7 @@ namespaces: {
 	})
 
 	t.Run("case=standard library import", func(t *testing.T) {
-		ns, errs := ParseCUE(src(`
+		ns, errs := Parse(src(`
 package keto
 
 import "strings"
@@ -221,7 +224,7 @@ namespaces: (strings.ToUpper("user")): {}
 	})
 
 	t.Run("case=multi-file package", func(t *testing.T) {
-		ns, errs := ParseCUE(
+		ns, errs := Parse(
 			SourceFile{Name: "a.cue", Content: []byte(`
 package acl
 
@@ -393,7 +396,7 @@ func TestParseCUEErrors(t *testing.T) {
 		},
 	} {
 		t.Run("case="+tc.name, func(t *testing.T) {
-			ns, errs := ParseCUE(tc.files...)
+			ns, errs := Parse(tc.files...)
 			assert.Nil(t, ns)
 			require.NotEmpty(t, errs)
 			var msgs []string
@@ -412,7 +415,7 @@ func TestParseCUEErrors(t *testing.T) {
 }
 
 func TestParseErrorFormat(t *testing.T) {
-	_, errs := ParseCUE(src(`namespaces: A: {
+	_, errs := Parse(src(`namespaces: A: {
 	relations: r: types: ["A"]
 	permissions: p: {op: "direct", relation: "nope"}
 }`))
@@ -438,9 +441,9 @@ func FuzzParseCUE(f *testing.F) {
 		f.Add(tc.input)
 	}
 	f.Fuzz(func(t *testing.T, input string) {
-		ns, errs := ParseCUE(src(input))
+		ns, errs := Parse(src(input))
 		if len(errs) > 0 && ns != nil {
-			t.Fatal("ParseCUE returned namespaces and errors")
+			t.Fatal("Parse returned namespaces and errors")
 		}
 		for _, e := range errs {
 			_ = e.Error()
@@ -448,4 +451,27 @@ func FuzzParseCUE(f *testing.F) {
 			_ = e.ToProto()
 		}
 	})
+}
+
+// TestRepositorySchemasCompile compiles every CUE schema in the repository,
+// for example the contrib examples and the benchmark fixture.
+func TestRepositorySchemasCompile(t *testing.T) {
+	var n int
+	for _, dir := range []string{"../contrib", "../internal/check/testfixtures"} {
+		require.NoError(t, filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() || filepath.Ext(path) != ".cue" {
+				return err
+			}
+			n++
+			content, err := os.ReadFile(path)
+			require.NoError(t, err)
+			ns, errs := Parse(SourceFile{Name: path, Content: content})
+			for _, e := range errs {
+				t.Error(e)
+			}
+			assert.NotEmpty(t, ns, path)
+			return nil
+		}))
+	}
+	assert.GreaterOrEqual(t, n, 5)
 }

@@ -14,7 +14,7 @@ import (
 )
 
 // FormatCUE renders namespaces as a formatted CUE schema in package keto.
-// ParseCUE compiles the result back into the same namespaces.
+// Parse compiles the result back into the same namespaces.
 //
 // A relation with types goes to `relations`. A relation with a rewrite and no
 // types goes to `permissions`, like an OPL `permits` entry.
@@ -72,7 +72,7 @@ func formatNamespace(n namespace) cueast.Expr {
 }
 
 // formatTopRewrite unwraps the implicit "or" that wraps a single leaf, because
-// ParseCUE adds it back.
+// Parse adds it back.
 func formatTopRewrite(rw *ast.SubjectSetRewrite) cueast.Expr {
 	if rw.Operation == ast.OperatorOr && len(rw.Children) == 1 {
 		return formatRewrite(rw.Children[0])

@@ -33,17 +33,18 @@ Tracking: [ISSUE-003](.okfw/issues/issue-003-cue-formatter-and-opl-equivalence-g
 ## Phase 3: Load CUE schemas in the server and the tests
 Tracking: [ISSUE-004](.okfw/issues/issue-004-load-cue-schemas-in-the-server-and-the-tests--01a1d39e126e.md)
 
-- [ ] Change `schema.Parse` to take CUE source files. Update the watcher, the handler and the test helpers.
-- [ ] Keep file bytes in the watcher, not readers. Compile all `.cue` files of a directory as one package.
-- [ ] Cap the request body of the syntax-check handler.
-- [ ] Rename `driver.WithOPL` to `WithSchema` and `Scenario.Opl` to `Scenario.Schema`.
-- [ ] Change the `namespaces.location` examples in the config schema to `.cue`.
+- [x] Change `schema.Parse` to take CUE source files. Update the watcher, the handler and the test helpers.
+- [x] Keep file bytes in the watcher, not readers. Compile all `.cue` files of a directory as one package.
+- [x] Cap the request body, the concurrent evaluations and the evaluation time of the syntax-check handler ([ISSUE-007](.okfw/issues/issue-007-bound-cue-evaluation-on-the-syntax-check-listener--01a1d3adf8f1.md)).
+- [x] Rename `driver.WithOPL` to `WithSchema` and `Scenario.Opl` to `Scenario.Schema`.
+- [x] Change the `namespaces.location` examples in the config schema to `.cue`.
+- [x] Convert the schema fixtures in the engine and config tests to CUE with `FormatCUE`. The engine tests need CUE as soon as `schema.Parse` reads CUE.
+- [x] Convert `internal/check/testfixtures/project_opl.ts` and the `contrib/` examples to `.cue`.
+- [x] Add a test that compiles every `.cue` schema in the repository.
 
 ## Phase 4: Migrate the fixtures and remove OPL
 Tracking: [ISSUE-005](.okfw/issues/issue-005-migrate-the-fixtures-and-remove-opl--01a1d39e1273.md)
 
-- [ ] Convert the OPL fixtures in the engine and config tests to CUE with `FormatCUE`. Port the error cases by hand.
-- [ ] Convert `internal/check/testfixtures/project_opl.ts` and the `contrib/` examples to `.cue`.
 - [ ] Delete the lexer, the parser, the fuzz corpus, the lexer and parser snapshots and `contrib/namespace-type-lib/`.
 - [ ] Add `FuzzParseCUE`. Keep `Test_simplify`.
 - [ ] Replace `GenerateOPLConfig` with `GenerateCUEConfig`.

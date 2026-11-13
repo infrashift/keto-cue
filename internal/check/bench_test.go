@@ -144,15 +144,15 @@ func BenchmarkCheckEngine(b *testing.B) {
 	})
 }
 
-//go:embed testfixtures/project_opl.ts
-var ProjectOPLConfig string
+//go:embed testfixtures/project.cue
+var ProjectSchemaConfig string
 
 func BenchmarkComputedUsersets(b *testing.B) {
 	ctx := context.Background()
 
 	spans := tracetest.NewSpanRecorder()
 	tracer := trace.NewTracerProvider(trace.WithSpanProcessor(spans)).Tracer("")
-	reg := driver.NewSqliteTestRegistry(b, driver.WithLogLevel("debug"), driver.WithOPL(ProjectOPLConfig), driver.WithTracer(tracer), driver.WithConfig(config.KeyFeatureFlagStrictMode, true))
+	reg := driver.NewSqliteTestRegistry(b, driver.WithLogLevel("debug"), driver.WithSchema(ProjectSchemaConfig), driver.WithTracer(tracer), driver.WithConfig(config.KeyFeatureFlagStrictMode, true))
 	reg.Logger().Logger.SetLevel(logrus.DebugLevel)
 
 	testhelpers.MapAndInsertTuplesFromString(b, reg, []string{

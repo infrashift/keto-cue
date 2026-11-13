@@ -198,7 +198,7 @@ func TestParser(t *testing.T) {
 	t.Run("suite=snapshots", func(t *testing.T) {
 		for _, tc := range parserTestCases {
 			t.Run(tc.name, func(t *testing.T) {
-				ns, errs := Parse(tc.input)
+				ns, errs := parseOPL(tc.input)
 				if len(errs) > 0 {
 					for _, err := range errs {
 						t.Error(err)
@@ -217,7 +217,7 @@ func TestParser(t *testing.T) {
 	t.Run("suite=errors", func(t *testing.T) {
 		for _, tc := range parserErrorTestCases {
 			t.Run(tc.name, func(t *testing.T) {
-				_, errs := Parse(tc.input)
+				_, errs := parseOPL(tc.input)
 				assert.Len(t, errs, 1)
 			})
 		}
@@ -233,7 +233,7 @@ func FuzzParser(f *testing.F) {
 	}
 
 	f.Fuzz(func(_ *testing.T, input string) {
-		Parse(input)
+		parseOPL(input)
 	})
 }
 

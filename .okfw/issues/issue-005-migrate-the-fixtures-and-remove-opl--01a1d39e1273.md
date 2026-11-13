@@ -5,29 +5,29 @@ type: "Issue"
 kind: "issue"
 tags:
   - "issue"
-  - "open"
   - "phase-4"
   - "schema"
+  - "in-progress"
 created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:35:14-06:00"
+timestamp: "2026-11-13T01:21:52-06:00"
 description: "Convert the OPL fixtures and examples to CUE, delete the OPL code and add the CUE validate command."
 ---
 
 # ISSUE-005: Migrate the fixtures and remove OPL
 
-**Status:** Open. **Phase:** 4.
+**Status:** In progress. **Phase:** 4.
 
 ## Description
 Convert the OPL fixtures and examples to CUE, delete the OPL code and add the CUE validate command.
 
 ## Acceptance Criteria
-- [ ] All engine and config tests use CUE schemas
-- [ ] The `contrib/` examples use `.cue`
 - [ ] The lexer, parser, fuzz corpus and type library are gone
 - [ ] `keto namespace validate` checks CUE files and directories
 - [ ] `GenerateCUEConfig` replaces `GenerateOPLConfig`
 
 ## Notes
+The fixture conversion moved to [ISSUE-004](/issues/issue-004-load-cue-schemas-in-the-server-and-the-tests--01a1d39e126e.md). The engine tests need CUE as soon as `schema.Parse` reads CUE.
+
 Follow the [Development workflow](/development-workflow--01a1d39e1245.md).
 
 ## Related

@@ -29,7 +29,7 @@ var baseSchema []byte
 // SourceFile is one CUE source file of a schema.
 type SourceFile struct {
 	// Name is the file name. It appears in errors and must be unique within
-	// one call to ParseCUE.
+	// one call to Parse.
 	Name    string
 	Content []byte
 }
@@ -95,10 +95,10 @@ type (
 	}
 )
 
-// ParseCUE compiles the CUE files of one schema into namespaces. All files
+// Parse compiles the CUE files of one schema into namespaces. All files
 // belong to one CUE package. Only standard-library imports are allowed. The
 // files are unified with the embedded base schema before compilation.
-func ParseCUE(files ...SourceFile) (namespaces []namespace, errs []*ParseError) {
+func Parse(files ...SourceFile) (namespaces []namespace, errs []*ParseError) {
 	c := &cueCompiler{files: make(map[string]SourceFile, len(files))}
 	defer func() {
 		// The CUE evaluator must not take down the server on a bad schema.
@@ -119,6 +119,10 @@ func (c *cueCompiler) compile(files []SourceFile) ([]namespace, []*ParseError) {
 
 	inst := build.NewContext().NewInstance("", nil)
 	for _, f := range files {
+		if f.Name == baseSchemaFilename {
+			c.addErr(srcRange{}, "the source file name %q is reserved", f.Name)
+			return nil, c.errors
+		}
 		if _, dup := c.files[f.Name]; dup {
 			c.addErr(srcRange{}, "duplicate source file name %q", f.Name)
 			return nil, c.errors
@@ -444,7 +448,7 @@ func (c *cueCompiler) addErr(at srcRange, format string, a ...any) {
 }
 
 func (c *cueCompiler) newError(msg string, at srcRange) *ParseError {
-	if at.file == "" {
+	if !at.start.IsValid() {
 		return newParseError(msg, "", "", ketoapi.SourcePosition{}, ketoapi.SourcePosition{})
 	}
 	return newParseError(msg, at.file, string(c.files[at.file].Content), toSourcePos(at.start), toSourcePos(at.end))
@@ -479,7 +483,7 @@ func (c *cueCompiler) addCUEErr(err error) {
 		// Errors against the base schema, for example an empty disjunction,
 		// can carry base positions only. Find the user value by its path.
 		if userVal, ok := c.userValueAt(e.Path()); ok {
-			if at.file == "" {
+			if !at.start.IsValid() {
 				at = c.rangeOf(userVal)
 			}
 			if strings.Contains(format, "empty disjunction") {
@@ -488,7 +492,7 @@ func (c *cueCompiler) addCUEErr(err error) {
 		}
 
 		key := fmt.Sprintf("%s|%s|%d|%d", msg, at.file, at.start.Line(), at.start.Column())
-		if at.file == "" {
+		if !at.start.IsValid() {
 			key = msg
 		}
 		if seen[key] {

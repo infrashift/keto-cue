@@ -14,7 +14,7 @@ type Scenario struct {
 	Name           string
 	Strict         bool
 	OrderedShardID bool
-	Opl            string
+	Schema         string
 	InputTuples    []string
 }
 
@@ -34,12 +34,12 @@ func (s Scenario) Run(t *testing.T, f func(t *testing.T, reg driver.Registry)) {
 		name += " (strict)"
 	}
 	t.Run(name, func(t *testing.T) {
-		if s.Opl != "" {
-			_, errs := schema.Parse(s.Opl)
+		if s.Schema != "" {
+			_, errs := schema.Parse(schema.SourceFile{Name: "schema.cue", Content: []byte(s.Schema)})
 			require.Len(t, errs, 0)
 		}
 		opts := []driver.TestRegistryOption{
-			driver.WithOPL(s.Opl),
+			driver.WithSchema(s.Schema),
 			driver.WithMapperNamespace(CustomMapperNamespace),
 			driver.WithConfig(config.KeyFeatureFlagStrictMode, s.Strict),
 		}

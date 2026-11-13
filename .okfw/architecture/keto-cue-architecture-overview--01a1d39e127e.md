@@ -15,7 +15,7 @@ description: "How a CUE schema flows from a config location to the AST that the 
 
 ## Data flow
 1. The config key `namespaces.location` names a file, a directory, an `http(s)` URL or a `base64` URL.
-2. `internal/driver/config/opl_config_namespace_watcher.go` reads the source bytes. It watches local files and caches remote results.
+2. `internal/driver/config/opl_config_namespace_watcher.go` reads the source bytes. It watches local files and caches remote results. A directory target gives one CUE package. The watcher compiles the `*.cue` files of the directory together. It ignores other files. Each change compiles all files again. A broken change keeps the last good namespaces.
 3. `schema.Parse` builds one CUE instance in memory ([ADR-0003](/decisions/adr-0003-build-cue-instances-in-memory-without-cue-load-or-a-module-registry--01a1d39e1254.md)). It unifies the instance with the embedded base schema.
 4. The compiler walks `namespaces` and writes `[]namespace.Namespace`. Each namespace holds `[]ast.Relation`.
 5. The semantic checks verify each reference. Each error carries a file name, a line and a column.

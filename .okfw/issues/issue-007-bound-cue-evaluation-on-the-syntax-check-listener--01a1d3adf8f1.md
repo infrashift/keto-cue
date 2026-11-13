@@ -15,15 +15,15 @@ description: "CUE evaluation has no time or memory bound, and the syntax-check l
 
 # ISSUE-007: Bound CUE evaluation on the syntax-check listener
 
-**Status:** Open. **Phase:** 3.
+**Status:** Open. **Phase:** 3. The handler limits are done. The document item waits for Phase 5.
 
 ## Description
 CUE evaluation has no time or memory bound. A schema with nested comprehensions or a large `list.Range` can use much CPU and memory. The syntax-check listener accepts schemas from clients, so a client can send such a schema. Schemas from the config file come from the operator.
 
 ## Acceptance Criteria
-- [ ] The syntax-check handler caps the request body.
-- [ ] The syntax-check handler limits the number of concurrent evaluations.
-- [ ] The syntax-check handler returns an error when an evaluation exceeds a timeout.
+- [x] The syntax-check handler caps the request body at 1 MiB (HTTP 413, gRPC `ResourceExhausted`).
+- [x] The syntax-check handler limits the concurrent evaluations to `GOMAXPROCS` (HTTP 429, gRPC `ResourceExhausted`).
+- [x] The syntax-check handler returns an error when an evaluation exceeds 10 seconds (HTTP 408, gRPC `DeadlineExceeded`).
 - [ ] The CUE schema document states the remaining risk for memory use.
 
 ## Notes

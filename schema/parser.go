@@ -25,7 +25,9 @@ type (
 	}
 )
 
-func Parse(input string) ([]namespace, []*ParseError) {
+// parseOPL parses an OPL schema. It exists only to migrate OPL fixtures and
+// goes away with the OPL lexer.
+func parseOPL(input string) ([]namespace, []*ParseError) {
 	p := &parser{
 		lexer: Lex("input", input),
 	}

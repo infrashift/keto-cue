@@ -182,10 +182,10 @@ func newCountingServer(t *testing.T, status int, body string) (*httptest.Server,
 }
 
 var testOPL = `
-import { Namespace } from "@ory/keto-namespace-types"
-
-class User implements Namespace {}
-class Document implements Namespace {}
+	namespaces: {
+		User: {}
+		Document: {}
+	}
 `
 
 type roundTripFunc func(*http.Request) (*http.Response, error)

@@ -4,6 +4,6 @@
 package schema
 
 func LibfuzzerFuzzParser(data []byte) int {
-	Parse(string(data))
+	Parse(SourceFile{Name: "fuzz.cue", Content: data})
 	return 0
 }

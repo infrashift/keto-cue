@@ -36,11 +36,11 @@ import (
 )
 
 // createFile writes the content to a temporary file, returning the path.
-// Good for testing config files.
-func createFile(t testing.TB, content string) (path string) {
+// The pattern follows os.CreateTemp. Good for testing config files.
+func createFile(t testing.TB, pattern, content string) (path string) {
 	t.Helper()
 
-	f, err := os.CreateTemp(t.TempDir(), "config-*.yaml")
+	f, err := os.CreateTemp(t.TempDir(), pattern)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,9 +140,10 @@ func WithNamespaces(namespaces []*namespace.Namespace) TestRegistryOption {
 	}
 }
 
-func WithOPL(opl string) TestRegistryOption {
+// WithSchema configures the registry with a CUE permission schema.
+func WithSchema(cue string) TestRegistryOption {
 	return func(t testing.TB, r *RegistryDefault) {
-		f := createFile(t, opl)
+		f := createFile(t, "schema-*.cue", cue)
 		require.NoError(t, r.c.Set(config.KeyNamespaces+".location", "file://"+f))
 	}
 }
