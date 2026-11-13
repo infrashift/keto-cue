@@ -27,8 +27,8 @@ Tracking: [ISSUE-002](.okfw/issues/issue-002-cue-compiler-next-to-the-opl-parser
 ## Phase 2: CUE formatter and OPL equivalence gate
 Tracking: [ISSUE-003](.okfw/issues/issue-003-cue-formatter-and-opl-equivalence-gate--01a1d39e1269.md)
 
-- [ ] Add `FormatCUE([]namespace) []byte` in `schema/cue_format.go`.
-- [ ] Add a test: OPL fixture → `Parse` → `FormatCUE` → `ParseCUE` → the same AST. Cover every OPL fixture.
+- [x] Add `FormatCUE([]namespace) []byte` in `schema/cue_format.go`.
+- [x] Add a test: OPL fixture → `Parse` → `FormatCUE` → `ParseCUE` → the same AST. Cover every OPL fixture.
 
 ## Phase 3: Load CUE schemas in the server and the tests
 Tracking: [ISSUE-004](.okfw/issues/issue-004-load-cue-schemas-in-the-server-and-the-tests--01a1d39e126e.md)

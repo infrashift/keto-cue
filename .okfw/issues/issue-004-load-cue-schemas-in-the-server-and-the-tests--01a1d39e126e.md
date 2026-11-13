@@ -5,17 +5,17 @@ type: "Issue"
 kind: "issue"
 tags:
   - "issue"
-  - "open"
   - "phase-3"
   - "config"
+  - "in-progress"
 created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:35:14-06:00"
+timestamp: "2026-11-13T00:54:38-06:00"
 description: "Route schema.Parse, the watcher, the syntax-check handler and the test helpers through the CUE compiler."
 ---
 
 # ISSUE-004: Load CUE schemas in the server and the tests
 
-**Status:** Open. **Phase:** 3.
+**Status:** In progress. **Phase:** 3.
 
 ## Description
 Route schema.Parse, the watcher, the syntax-check handler and the test helpers through the CUE compiler.
