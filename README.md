@@ -18,8 +18,9 @@ performant authorization server for managing permissions at scale.
 > **keto-cue fork.** This repository is a fork of Ory Keto that reads
 > permission schemas in [CUE](https://cuelang.org) instead of the Ory
 > Permission Language (OPL). The check and expand engines, the storage and the
-> APIs are the same. See the [CUE permission schema](docs/cue_permission_schema.md)
-> document. A self-hosted keto-cue server loads a schema like this:
+> APIs are the same. See the
+> [keto-cue documentation](https://infrashift.github.io/keto-cue/) (source in
+> [docs/](docs/)). A self-hosted keto-cue server loads a schema like this:
 >
 > ```shell
 > cat > schema.cue <<'CUE'

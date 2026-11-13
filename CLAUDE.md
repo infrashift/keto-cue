@@ -13,7 +13,8 @@ keto-cue is a fork of Ory Keto. It reads permission schemas in CUE, not in the O
 - `internal/namespace/ast/` holds the AST that the check and expand engines walk.
 - `internal/driver/config/opl_config_namespace_watcher.go` loads and watches the schema files.
 - `cmd/namespace/` holds the `keto namespace` commands.
-- `scripts/ste-check.py` checks the keto-cue documents against ASD-STE100.
+- `docs/` is the Astro Starlight documentation site. The pages are in `docs/src/content/docs/docs/`. GitHub Actions deploys it to GitHub Pages.
+- `scripts/ste-check.py` checks the keto-cue documents and the site pages against ASD-STE100.
 
 ## Verification & Workflow Commands (HOW)
 Run these targets after every change:
@@ -22,14 +23,16 @@ Run these targets after every change:
 - `make wiki` → `okfw validate --all && okfw validate --okf`
 - `make docs-style` → `scripts/ste-check.py`
 - `make check` → all of the gates above
+- `make docs-build` → build the site (bun). Run it when you change `docs/`.
 
 ## Mandatory Execution Rules
 1. **One phase at a time.** Read `PLAN.md`. Implement only the first unchecked phase. Follow the *Development workflow* guide in `.okfw/`.
 2. **Repeat until green.** Implement, lint, verify. Fix each failure and run all gates again. Do not commit while a gate fails.
 3. **Test integrity.** Do not weaken or delete tests to make a gate pass. Port an OPL test to CUE. Do not drop it.
 4. **Small blast radius.** Do not change production code in `internal/check`, `internal/expand`, `internal/persistence` or `proto/`. Test files in those packages can change.
-5. **Wiki stays in sync.** Each `PLAN.md` phase has a mirror issue in `.okfw/issues/`. Record each decision as an ADR when you make it. Close the issue when the phase is done.
-6. **Documentation follows ASD-STE100 (Simplified Technical English).** Use active voice, simple present tense and short sentences. Run `make docs-style`.
+5. **Docs site stays in sync.** Each phase updates the site pages for the features it delivers. `TestSiteSnippets` compiles each CUE snippet of the site.
+6. **Wiki stays in sync.** Each `PLAN.md` phase has a mirror issue in `.okfw/issues/`. Record each decision as an ADR when you make it. Close the issue when the phase is done.
+7. **Documentation follows ASD-STE100 (Simplified Technical English).** Use active voice, simple present tense and short sentences. Run `make docs-style`.
 
 <!-- BEGIN okfw -->
 ## Project knowledge base (okfw)

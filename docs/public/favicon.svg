@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="keto-cue">
+  <rect width="64" height="64" rx="14" fill="#0e1520"/>
+  <rect x="4.5" y="4.5" width="55" height="55" rx="11" fill="none" stroke="#22c3a6" stroke-opacity="0.45" stroke-width="2"/>
+  <!-- a keyhole -->
+  <circle cx="32" cy="25" r="10" fill="#22c3a6"/>
+  <path d="M26 30 H38 L42 50 H22 Z" fill="#22c3a6"/>
+</svg>

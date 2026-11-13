@@ -1,0 +1,219 @@
+---
+// Landing page: not managed by Starlight.
+import '../styles/landing.css';
+
+// A real schema (docs/src/demo/schema.cue) and the real output of
+// `keto namespace validate` on it and on docs/src/demo/typo.cue.
+// `make docs-demo` regenerates output.txt with the keto binary.
+import schemaSource from '../demo/schema.cue?raw';
+import demoOutput from '../demo/output.txt?raw';
+
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const repo = 'https://github.com/infrashift/keto-cue';
+
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// A string literal, with the traversal arrow of a short rewrite marked.
+const str = (s: string) =>
+	`<span class="str">${esc(s).replace(/-&gt;/g, '<span class="trav">-&gt;</span>')}</span>`;
+
+// Light CUE highlighting: comments, keywords, field labels and strings.
+const cueLine = (line: string) => {
+	if (/^\s*\/\//.test(line)) return `<span class="cmt">${esc(line)}</span>`;
+	return line
+		.split(/("(?:[^"\\]|\\.)*")/)
+		.map((part, i) => {
+			if (i % 2 === 1) return str(part);
+			return esc(part)
+				.replace(/\b(package|import|for|in|if)\b/g, '<span class="kw">$1</span>')
+				.replace(/([A-Za-z_#][A-Za-z0-9_]*)(:)/g, '<span class="lbl">$1</span>$2');
+		})
+		.join('');
+};
+
+const sourceHtml = schemaSource.trimEnd().split('\n').map(cueLine).join('\n');
+
+const outputHtml = demoOutput
+	.trimEnd()
+	.replace(/\n{3,}/g, '\n\n')
+	.split('\n')
+	.map((line) => {
+		if (line.startsWith('$ ')) return `<span class="prompt-line">${esc(line)}</span>`;
+		if (/: valid, /.test(line)) return `<span class="ok">${esc(line)}</span>`;
+		if (/: error from /.test(line)) return `<span class="warn">${esc(line)}</span>`;
+		return esc(line);
+	})
+	.join('\n');
+---
+
+<html lang="en" data-theme="dark">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>keto-cue: Zanzibar Permissions in CUE</title>
+	<meta name="description" content="keto-cue is a fork of Ory Keto that reads Zanzibar permission schemas in CUE: short rewrites, comprehensions and errors with file, line and column." />
+	<link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+</head>
+<body>
+
+<nav class="nav">
+	<a href={base} class="nav-logo"><span class="prompt">&gt;</span> keto-cue</a>
+	<ul class="nav-links">
+		<li><a href={`${base}docs/`}>Docs</a></li>
+		<li><a href={`${base}docs/getting-started/`}>Quick Start</a></li>
+		<li class="hide-sm"><a href={`${base}docs/project/decisions/`}>Design</a></li>
+		<li class="hide-sm"><a href={`${base}docs/project/roadmap/`}>Roadmap</a></li>
+		<li><a href={repo}>GitHub</a></li>
+		<li><button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">&#9790;</button></li>
+	</ul>
+</nav>
+
+<section class="hero">
+	<div class="wordmark"><span class="prompt">&gt;</span> keto-cue<span class="caret">_</span></div>
+	<h1>Zanzibar permissions, written in CUE</h1>
+	<p class="tagline">
+		keto-cue is a fork of <strong>Ory Keto</strong> that reads permission schemas in <strong>CUE</strong>.
+		A rule is <code>"owners"</code> or <code>"parents-&gt;view"</code>. CUE definitions and comprehensions remove repetition.
+		Each error names the file, the line and the column.
+		The check engine, the storage and the APIs are the Ory Keto code.
+	</p>
+	<div class="hero-cta">
+		<a href={`${base}docs/getting-started/`} class="btn btn-primary">Get Started</a>
+		<a href={`${base}docs/guides/rewrites/`} class="btn btn-secondary">Rewrites</a>
+		<a href={repo} class="btn btn-ghost">GitHub &rarr;</a>
+	</div>
+</section>
+
+<section class="install">
+	<code>git clone {repo} &amp;&amp; cd keto-cue &amp;&amp; go build -o keto .</code>
+	<span class="note">
+		Build from source with the Go version in <code>go.mod</code>. keto-cue has no binary release yet. Apache 2.0. <a href={`${base}docs/getting-started/`}>Getting started</a>
+	</span>
+</section>
+
+<section class="demo">
+	<div class="demo-grid">
+		<div class="terminal">
+			<div class="terminal-bar">
+				<span class="dot"></span><span class="dot"></span><span class="dot"></span>
+				<span class="title">schema.cue &nbsp;·&nbsp; short rewrites</span>
+			</div>
+			<pre set:html={sourceHtml}></pre>
+		</div>
+		<div class="terminal">
+			<div class="terminal-bar">
+				<span class="dot"></span><span class="dot"></span><span class="dot"></span>
+				<span class="title">keto namespace validate &nbsp;·&nbsp; a schema and a schema with two typos</span>
+			</div>
+			<pre set:html={outputHtml}></pre>
+		</div>
+	</div>
+	<p class="demo-caption">
+		Left: a schema with groups, folders and documents. A user can view a document through a folder, unless the user is blocked.
+		Right: <code>keto namespace validate</code> on this schema, and on a copy with the typos <code>"Usr"</code> and <code>"parents-&gt;veiw"</code>. keto produced this output.
+	</p>
+</section>
+
+<section class="features">
+	<h2>Why keto-cue?</h2>
+	<div class="feature-grid">
+		<div class="feature-card">
+			<div class="icon">&#9998;</div>
+			<h3>Short Rewrites</h3>
+			<p><code>"owners"</code>, <code>"parents-&gt;view"</code>, <code>{'{or: [...]}'}</code>, <code>{'{and: [...]}'}</code> and <code>{'{not: ...}'}</code>. The rewrites example is less than half the size of its OPL version.</p>
+		</div>
+		<div class="feature-card">
+			<div class="icon">&#129513;</div>
+			<h3>Real CUE</h3>
+			<p>Definitions, comprehensions and the CUE standard library. Make one permission for each action, or share relations between namespaces.</p>
+		</div>
+		<div class="feature-card">
+			<div class="icon">&#128205;</div>
+			<h3>Clear Errors</h3>
+			<p>Each error names the file, the line and the column, and marks the source. A misspelled field or a missing relation stops the schema.</p>
+		</div>
+		<div class="feature-card">
+			<div class="icon">&#9881;</div>
+			<h3>Same Engine</h3>
+			<p>The compiler writes the namespace tree that the OPL parser wrote. The check and expand engines, the storage and the protos do not change.</p>
+		</div>
+		<div class="feature-card">
+			<div class="icon">&#9989;</div>
+			<h3>Validate in CI</h3>
+			<p><code>keto namespace validate</code> compiles a file or a directory as the server does, and exits with an error on each problem.</p>
+		</div>
+		<div class="feature-card">
+			<div class="icon">&#128737;</div>
+			<h3>Bounded Syntax Check</h3>
+			<p>The syntax-check API caps the request size, the concurrent checks and the time of each check.</p>
+		</div>
+	</div>
+</section>
+
+<section class="roadmap">
+	<h2>How it got here</h2>
+	<p class="subtitle">The project wiki tracks each phase as an issue. Each phase lands as one tested commit.</p>
+	<div class="roadmap-grid">
+		<a class="roadmap-card" href={`${base}docs/project/roadmap/`}>
+			<strong>Compiler</strong><span>CUE to the Keto namespace tree</span><br /><span class="status done">Done</span>
+		</a>
+		<a class="roadmap-card" href={`${base}docs/project/roadmap/`}>
+			<strong>Equivalence</strong><span>Each OPL fixture, same tree</span><br /><span class="status done">Done</span>
+		</a>
+		<a class="roadmap-card" href={`${base}docs/project/roadmap/`}>
+			<strong>Server</strong><span>Watcher, limits, test fixtures</span><br /><span class="status done">Done</span>
+		</a>
+		<a class="roadmap-card" href={`${base}docs/project/roadmap/`}>
+			<strong>OPL removed</strong><span>keto namespace validate</span><br /><span class="status done">Done</span>
+		</a>
+		<a class="roadmap-card" href={`${base}docs/project/roadmap/`}>
+			<strong>Short forms</strong><span>Rewrites as short as OPL</span><br /><span class="status done">Done</span>
+		</a>
+		<a class="roadmap-card" href={`${base}docs/project/roadmap/`}>
+			<strong>Release</strong><span>Binaries and images</span><br /><span class="status next">Next</span>
+		</a>
+	</div>
+</section>
+
+<section class="callout">
+	<div class="callout-inner">
+		<h3>Coming from OPL?</h3>
+		<p>Each OPL construct has one CUE form. The compiler writes the same tree, so your relation tuples and check results do not change.</p>
+		<a href={`${base}docs/guides/migrating-from-opl/`} class="btn btn-primary">Migrating from OPL</a>
+		<a href={`${base}docs/guides/rewrites/`} class="btn btn-secondary">Rewrites</a>
+	</div>
+</section>
+
+<footer class="landing-footer">
+	<p>Built by <a href="https://github.com/infrashift">InfraShift</a> &middot; A fork of <a href="https://github.com/ory/keto">Ory Keto</a> &middot; Sibling of <a href="https://infrashift.github.io/zmake/">zmake</a></p>
+</footer>
+
+<script>
+const toggle = document.getElementById('theme-toggle');
+const html = document.documentElement;
+
+function setTheme(theme: string) {
+	html.setAttribute('data-theme', theme);
+	try {
+		localStorage.setItem('keto-cue-theme', theme);
+	} catch {
+		// Storage can be blocked (private windows); the toggle still works for this page view.
+	}
+	if (toggle) toggle.textContent = theme === 'dark' ? '☾' : '☀';
+}
+
+toggle?.addEventListener('click', () => {
+	setTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+let saved: string | null = null;
+try {
+	saved = localStorage.getItem('keto-cue-theme');
+} catch {
+	saved = null;
+}
+setTheme(saved || 'dark');
+</script>
+
+</body>
+</html>

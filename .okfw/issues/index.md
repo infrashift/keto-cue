@@ -12,4 +12,5 @@
 * [ISSUE-006: CUE schema documentation](issue-006-cue-schema-documentation--01a1d39e1279.md) - Document the CUE permission schema and mark the OPL documents as superseded.
 * [ISSUE-007: Bound CUE evaluation on the syntax-check listener](issue-007-bound-cue-evaluation-on-the-syntax-check-listener--01a1d3adf8f1.md) - CUE evaluation has no time or memory bound, and the syntax-check listener accepts schemas from clients.
 * [ISSUE-008: Short forms for CUE rewrites and relations](issue-008-short-forms-for-cue-rewrites-and-relations--01a1d4cf27e7.md) - Add short forms for rewrites and relation types so that a CUE schema is as short as an OPL schema.
+* [ISSUE-009: Documentation site on GitHub Pages](issue-009-documentation-site-on-github-pages--01a1d4da03a0.md) - Publish the keto-cue documentation as an Astro Starlight site on GitHub Pages, with the zmake setup.
 

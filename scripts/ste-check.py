@@ -24,13 +24,15 @@ SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=\S)")
 STEP_RE = re.compile(r"^\d+\.\s")
 
 
-# Upstream Ory documents (README.md, most of docs/) do not use STE.
-# Add a keto-cue document to STE_DOCS when you create it.
-STE_DOCS = ("PLAN.md", "CLAUDE.md", "docs/cue_permission_schema.md")
+# Upstream Ory documents (README.md) do not use STE.
+# Add a keto-cue document to STE_DOCS when you create it. The site pages in
+# docs/src/content/docs are always in scope.
+STE_DOCS = ("PLAN.md", "CLAUDE.md", "docs/README.md")
 
 
 def files(root):
     yield from (root / n for n in STE_DOCS if (root / n).exists())
+    yield from sorted((root / "docs/src/content/docs").rglob("*.md*"))
     for p in sorted((root / ".okfw").rglob("*.md")):
         rel = p.relative_to(root / ".okfw")
         if rel.parts[0] not in ("daily", "ephemeral") and p.name not in ("index.md", "log.md"):

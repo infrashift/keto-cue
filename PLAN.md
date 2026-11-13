@@ -64,6 +64,15 @@ Tracking: [ISSUE-008](.okfw/issues/issue-008-short-forms-for-cue-rewrites-and-re
 - [x] Make `FormatCUE` write the short forms. Convert the `contrib` examples and the benchmark fixture.
 - [x] Show the short forms in the user document, the README and the spec concept.
 
+## Phase 7: Documentation site on GitHub Pages
+Tracking: [ISSUE-009](.okfw/issues/issue-009-documentation-site-on-github-pages--01a1d4da03a0.md)
+
+- [x] Create an Astro Starlight site in `docs/` with the zmake versions and a landing page.
+- [x] Write the Start Here, Guides, Reference and Project pages. Replace `docs/cue_permission_schema.md`.
+- [x] Add `make docs-demo`, `make docs-dev` and `make docs-build`.
+- [x] Add `.github/workflows/docs-release.yml`.
+- [x] Check the site pages with `make docs-style` and their CUE snippets with `TestSiteSnippets`.
+
 ## Verification
 Run these gates after each phase. Do not start the next phase while a gate fails.
 

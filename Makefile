@@ -27,7 +27,7 @@ PRETTIER_VERSION=$(shell cat package.json | jq -r '.devDependencies["prettier"] 
 
 .PHONY: format
 format: .bin/ory
-	.bin/ory dev headers copyright --type=open-source --exclude=.bin --exclude=internal/httpclient --exclude=proto --exclude=oryx
+	.bin/ory dev headers copyright --type=open-source --exclude=.bin --exclude=docs --exclude=internal/httpclient --exclude=proto --exclude=oryx
 	go tool goimports -w -local github.com/ory/keto *.go internal cmd contrib ketoctx ketoapi embedx
 	@echo "Prettier Version: $(PRETTIER_VERSION)"
 	npx --package=prettier@$(PRETTIER_VERSION)  prettier . --write
@@ -171,7 +171,7 @@ ENGINE_PKGS = ./internal/check/... ./internal/expand/...
 GOFMT ?= $(shell go env GOROOT)/bin/gofmt
 CUE_DIRS = schema internal/namespace internal/driver/config cmd/namespace internal/testhelpers
 
-.PHONY: lint test-cue wiki docs-style check
+.PHONY: lint test-cue wiki docs-style check docs-demo docs-dev docs-build
 
 ## lint: check gofmt and run go vet on the keto-cue packages
 lint:
@@ -190,6 +190,23 @@ wiki:
 ## docs-style: check the keto-cue documents against ASD-STE100 rules
 docs-style:
 	python3 -I scripts/ste-check.py
+
+## docs-demo: regenerate the landing-page demo output with keto itself
+KETO_BIN ?= .bin/keto
+docs-demo:
+	go build -o $(KETO_BIN) .
+	cd docs/src/demo && for f in schema.cue typo.cue; do \
+		echo "\$$ keto namespace validate $$f"; \
+		$(CURDIR)/$(KETO_BIN) namespace validate $$f 2>&1 || true; \
+	done > output.txt
+
+## docs-dev: run the Astro Starlight site locally (bun)
+docs-dev:
+	cd docs && bun install && bun --bun run dev
+
+## docs-build: build the site into docs/dist (the same build as the Pages deploy)
+docs-build:
+	cd docs && bun install --frozen-lockfile && bun --bun run build
 
 ## check: run all keto-cue gates
 check: lint test-cue wiki docs-style

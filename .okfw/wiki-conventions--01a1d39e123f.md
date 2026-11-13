@@ -46,7 +46,7 @@ This guide defines how the keto-cue OKF wiki (`.okfw/`) stores project knowledge
 - Find open work with `okfw search --path issues --tag open`.
 
 ## Writing style
-All keto-cue documentation follows ASD-STE100 Simplified Technical English. This includes the wiki, `PLAN.md`, `CLAUDE.md` and `docs/cue_permission_schema.md`. The upstream Ory documents keep their own style.
+All keto-cue documentation follows ASD-STE100 Simplified Technical English. This includes the wiki, `PLAN.md`, `CLAUDE.md` and the site pages in `docs/src/content/docs/`. The upstream Ory documents keep their own style.
 
 - Use active voice and simple present tense: "The compiler rejects the field."
 - Start each procedural step with an imperative verb: Run, Read, Inspect, Verify, Add, Set.

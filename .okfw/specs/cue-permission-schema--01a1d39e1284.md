@@ -67,7 +67,7 @@ namespaces: Doc: permissions: {
 Each error names the file, the line and the column ([ADR-0005](/decisions/adr-0005-parse-errors-carry-the-file-name-and-1-based-positions--01a1d3adf8cf.md)). The compiler reports CUE errors first. It runs the reference checks only when the schema has no CUE errors.
 
 ## User documentation
-[docs/cue_permission_schema.md](https://github.com/infrashift/keto-cue/blob/master/docs/cue_permission_schema.md) is the user guide. It has the OPL to CUE table and the limits of the syntax check.
+The [documentation site](https://infrashift.github.io/keto-cue/) is the user guide ([ADR-0008](/decisions/adr-0008-document-keto-cue-with-astro-starlight-on-github-pages--01a1d4da03c6.md)). Its source is `docs/src/content/docs/docs/`. It has the OPL to CUE table, the rules with their errors and the limits of the syntax check.
 
 ## Rules
 - The compiler wraps a top-level leaf in a rewrite and flattens nested operations of the same kind.

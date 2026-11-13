@@ -1,0 +1,19 @@
+$ keto namespace validate schema.cue
+schema.cue: valid, 4 namespace(s)
+$ keto namespace validate typo.cue
+typo.cue: error from 21:14 to 21:19: namespace "Usr" was not declared
+
+  20 | 			owners: ["User"]
+  21 | 			blocked: ["Usr"]
+     | 			          ^~~~~
+  22 | 		}
+
+
+typo.cue: error from 25:30 to 25:45: relation "veiw" was not declared in namespace "Folder"
+
+  24 | 			edit: or: ["owners", "parents->edit"]
+  25 | 			view: and: [{or: ["edit", "parents->veiw"]}, {not: "blocked"}]
+     | 			                          ^~~~~~~~~~~~~~~
+  26 | 		}
+
+
