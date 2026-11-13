@@ -34,7 +34,7 @@ func TestSiteSnippets(t *testing.T) {
 	require.NotEmpty(t, pages)
 
 	for _, page := range pages {
-		content, err := os.ReadFile(page)
+		content, err := os.ReadFile(page) //nolint:gosec // Test code reads the repository docs.
 		require.NoError(t, err)
 
 		var group []SourceFile

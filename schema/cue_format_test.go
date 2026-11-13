@@ -42,7 +42,7 @@ func TestFormatCUERoundTrip(t *testing.T) {
 			if err != nil || d.IsDir() || filepath.Ext(path) != ".cue" {
 				return err
 			}
-			b, err := os.ReadFile(path)
+			b, err := os.ReadFile(path) //nolint:gosec // Test code reads the repository schemas.
 			inputs[path] = string(b)
 			return err
 		}))

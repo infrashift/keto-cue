@@ -14,6 +14,7 @@ import (
 	"cuelang.org/go/cue/build"
 	"cuelang.org/go/cue/cuecontext"
 	cueerrors "cuelang.org/go/cue/errors"
+	"cuelang.org/go/cue/parser"
 	"cuelang.org/go/cue/token"
 
 	"github.com/ory/keto/internal/namespace/ast"
@@ -143,7 +144,12 @@ func (c *cueCompiler) compile(files []SourceFile) ([]namespace, []*ParseError) {
 			return nil, c.errors
 		}
 		c.files[f.Name] = f
-		if err := inst.AddFile(f.Name, f.Content); err != nil {
+		file, err := parser.ParseFile(f.Name, f.Content, parser.ParseComments)
+		if err != nil {
+			c.addCUEErr(err)
+			continue
+		}
+		if err := inst.AddSyntax(file); err != nil {
 			c.addCUEErr(err)
 		}
 	}

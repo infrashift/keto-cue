@@ -461,7 +461,7 @@ func TestRepositorySchemasCompile(t *testing.T) {
 				return err
 			}
 			n++
-			content, err := os.ReadFile(path)
+			content, err := os.ReadFile(path) //nolint:gosec // Test code reads the repository schemas.
 			require.NoError(t, err)
 			ns, errs := Parse(SourceFile{Name: path, Content: content})
 			for _, e := range errs {

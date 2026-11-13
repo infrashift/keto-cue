@@ -76,11 +76,9 @@ func (e *ParseError) Error() string {
 	// Columns are 1-based; the caret marks the first column of the error and
 	// the tildes mark the rest of the range on the same line.
 	startCol := e.start.Col - 1
-	endCol := startCol
+	endCol := len(rows[errorLineIdx])
 	if e.end.Line == e.start.Line {
 		endCol = e.end.Col - 1
-	} else {
-		endCol = len(rows[errorLineIdx])
 	}
 	s.WriteString("     | ")
 	for i, r := range rows[errorLineIdx] {
