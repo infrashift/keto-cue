@@ -27,6 +27,7 @@ description: "keto-cue pins cuelang.org/go v0.17.1, the latest stable release, t
 ## Consequences
 - The keto binary grows by the size of the CUE evaluator.
 - A CUE upgrade is a deliberate change. Run `make test-cue` after each upgrade.
+- `go get` also raised three indirect modules: `go-toml/v2` 2.2.3 → 2.3.1, `go-internal` 1.14.1 → 1.15.0 and `wazero` 1.11.0 → 1.12.0. CUE requires these versions.
 
 ## Alternatives considered
 - **Write a CUE subset parser.** Rejected: it loses unification, constraints and the standard library.

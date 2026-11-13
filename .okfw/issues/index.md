@@ -10,4 +10,5 @@
 * [ISSUE-004: Load CUE schemas in the server and the tests](issue-004-load-cue-schemas-in-the-server-and-the-tests--01a1d39e126e.md) - Route schema.Parse, the watcher, the syntax-check handler and the test helpers through the CUE compiler.
 * [ISSUE-005: Migrate the fixtures and remove OPL](issue-005-migrate-the-fixtures-and-remove-opl--01a1d39e1273.md) - Convert the OPL fixtures and examples to CUE, delete the OPL code and add the CUE validate command.
 * [ISSUE-006: CUE schema documentation](issue-006-cue-schema-documentation--01a1d39e1279.md) - Document the CUE permission schema and mark the OPL documents as superseded.
+* [ISSUE-007: Bound CUE evaluation on the syntax-check listener](issue-007-bound-cue-evaluation-on-the-syntax-check-listener--01a1d3adf8f1.md) - CUE evaluation has no time or memory bound, and the syntax-check listener accepts schemas from clients.
 

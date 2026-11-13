@@ -8,6 +8,7 @@ import (
 
 	internalNamespace "github.com/ory/keto/internal/namespace"
 	"github.com/ory/keto/internal/namespace/ast"
+	"github.com/ory/keto/ketoapi"
 )
 
 type (
@@ -76,12 +77,27 @@ func (p *parser) addFatal(item item, format string, a ...interface{}) {
 }
 
 func (p *parser) addErr(item item, format string, a ...interface{}) {
-	err := &ParseError{
-		msg:  fmt.Sprintf(format, a...),
-		item: item,
-		p:    p,
+	p.errors = append(p.errors, newParseError(
+		fmt.Sprintf(format, a...), "", p.lexer.input,
+		p.toSrcPos(item.Start), p.toSrcPos(item.End)))
+}
+
+// toSrcPos converts the given byte offset in the OPL input to a line and
+// column number.
+func (p *parser) toSrcPos(pos int) (srcPos ketoapi.SourcePosition) {
+	srcPos.Line = 1
+	for _, c := range p.lexer.input {
+		srcPos.Col++
+		pos--
+		if pos <= 0 {
+			break
+		}
+		if c == '\n' {
+			srcPos.Line++
+			srcPos.Col = 0
+		}
 	}
-	p.errors = append(p.errors, err)
+	return
 }
 
 type matcher func(p *parser) (matched bool)

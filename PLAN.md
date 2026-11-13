@@ -15,14 +15,14 @@ Tracking: [ISSUE-001](.okfw/issues/issue-001-okfw-wiki-mcp-server-and-documentat
 ## Phase 1: CUE compiler next to the OPL parser
 Tracking: [ISSUE-002](.okfw/issues/issue-002-cue-compiler-next-to-the-opl-parser--01a1d39e1264.md)
 
-- [ ] Add `cuelang.org/go v0.17.1` ([ADR-0004](.okfw/decisions/adr-0004-add-cuelang-org-go-v0-17-1-as-a-dependency--01a1d39e125a.md)).
-- [ ] Embed `schema/cue_base.cue`. Keep the definitions closed and the top level open.
-- [ ] Add `ParseCUE(files []SourceFile)` in `schema/cue_compiler.go`. Build the instance in memory ([ADR-0003](.okfw/decisions/adr-0003-build-cue-instances-in-memory-without-cue-load-or-a-module-registry--01a1d39e1254.md)).
-- [ ] Map `or` and `and` to `*ast.SubjectSetRewrite`, `direct` to `*ast.ComputedSubjectSet`, `tupleToSubjectSet` to `*ast.TupleToSubjectSet` and `invert` to `*ast.InvertResult`.
-- [ ] Wrap a top-level leaf with `AsRewrite()`. Run `simplifyExpression` on each rewrite.
-- [ ] Port the OPL type checks to `schema/cue_checks.go`. Keep the error text. Add source positions.
-- [ ] Change `ParseError` to hold a file name, the source and the start and end positions. Keep `Error()`, `ToAPI()` and `ToProto()`.
-- [ ] Add snapshot, negative and multi-file tests in `schema/cue_compiler_test.go`.
+- [x] Add `cuelang.org/go v0.17.1` ([ADR-0004](.okfw/decisions/adr-0004-add-cuelang-org-go-v0-17-1-as-a-dependency--01a1d39e125a.md)).
+- [x] Embed `schema/cue_base.cue`. Keep the definitions closed and the top level open.
+- [x] Add `ParseCUE(files []SourceFile)` in `schema/cue_compiler.go`. Build the instance in memory ([ADR-0003](.okfw/decisions/adr-0003-build-cue-instances-in-memory-without-cue-load-or-a-module-registry--01a1d39e1254.md)).
+- [x] Map `or` and `and` to `*ast.SubjectSetRewrite`, `direct` to `*ast.ComputedSubjectSet`, `tupleToSubjectSet` to `*ast.TupleToSubjectSet` and `invert` to `*ast.InvertResult`.
+- [x] Wrap a top-level leaf with `AsRewrite()`. Run `simplifyExpression` on each rewrite.
+- [x] Port the OPL type checks to `schema/cue_checks.go`. Keep the error text. Add source positions.
+- [x] Change `ParseError` to hold a file name, the source and the start and end positions. Keep `Error()`, `ToAPI()` and `ToProto()`.
+- [x] Add snapshot, negative and multi-file tests in `schema/cue_compiler_test.go`.
 
 ## Phase 2: CUE formatter and OPL equivalence gate
 Tracking: [ISSUE-003](.okfw/issues/issue-003-cue-formatter-and-opl-equivalence-gate--01a1d39e1269.md)

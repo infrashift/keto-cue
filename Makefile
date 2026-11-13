@@ -168,13 +168,14 @@ node_modules: package-lock.json
 
 CUE_PKGS = ./schema/... ./internal/namespace/... ./internal/driver/config/... ./cmd/namespace/... ./internal/testhelpers/...
 ENGINE_PKGS = ./internal/check/... ./internal/expand/...
+GOFMT ?= $(shell go env GOROOT)/bin/gofmt
 CUE_DIRS = schema internal/namespace internal/driver/config cmd/namespace internal/testhelpers
 
 .PHONY: lint test-cue wiki docs-style check
 
 ## lint: check gofmt and run go vet on the keto-cue packages
 lint:
-	@test -z "$$(gofmt -l $(CUE_DIRS))" || { echo "gofmt needed:"; gofmt -l $(CUE_DIRS); exit 1; }
+	@test -z "$$($(GOFMT) -l $(CUE_DIRS))" || { echo "gofmt needed:"; $(GOFMT) -l $(CUE_DIRS); exit 1; }
 	go vet $(CUE_PKGS)
 
 ## test-cue: run the schema, config and engine tests
