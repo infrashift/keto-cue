@@ -435,7 +435,7 @@ func TestEngine(t *testing.T) {
 func TestEngineOpl(t *testing.T) {
 	type expandTest struct {
 		name        string
-		schemaSrc         string
+		schemaSrc   string
 		inputTuples []string
 		expandInput string
 		expected    *relationtuple.Tree
@@ -533,8 +533,8 @@ func TestEngineOpl(t *testing.T) {
 			),
 		},
 		{
-			name: "case=expands 1 level without schema",
-			schemaSrc:  "",
+			name:      "case=expands 1 level without schema",
+			schemaSrc: "",
 			inputTuples: []string{
 				"Group:parent#users@User:1",
 				"Group:parent#users@User:2",

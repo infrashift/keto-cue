@@ -48,7 +48,7 @@ func TestCallLimit(t *testing.T) {
 
 	for _, tc := range []struct {
 		name      string
-		schemaSrc       string
+		schemaSrc string
 		opts      []driver.TestRegistryOption
 		tuples    []string
 		check     string

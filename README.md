@@ -15,12 +15,12 @@ Ory Keto is the first and most popular open source implementation of "Zanzibar:
 Google's Consistent, Global Authorization System". It provides a scalable,
 performant authorization server for managing permissions at scale.
 
-> **keto-cue fork.** This repository is a fork of Ory Keto that reads
-> permission schemas in [CUE](https://cuelang.org) instead of the Ory
-> Permission Language (OPL). The check and expand engines, the storage and the
-> APIs are the same. See the
-> [keto-cue documentation](https://infrashift.github.io/keto-cue/) (source in
-> [docs/](docs/)). A self-hosted keto-cue server loads a schema like this:
+> **keto-cue fork.** This repository is a fork of Ory Keto that reads permission
+> schemas in [CUE](https://cuelang.org) instead of the Ory Permission Language
+> (OPL). The check and expand engines, the storage and the APIs are the same.
+> See the [keto-cue documentation](https://infrashift.github.io/keto-cue/)
+> (source in [docs/](docs/)). A self-hosted keto-cue server loads a schema like
+> this:
 >
 > ```shell
 > cat > schema.cue <<'CUE'

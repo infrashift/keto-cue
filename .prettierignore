@@ -6,4 +6,11 @@ ketoctx
 .schema/openapi/patches
 proto/**/*.js
 proto/**/*.ts
-oryxdocs/
+oryx
+# keto-cue: the docs site, the okfw wiki and the STE documents keep their own format.
+docs/
+.okfw/
+.claude/
+CLAUDE.md
+PLAN.md
+

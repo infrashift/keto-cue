@@ -8,14 +8,14 @@ on:
   push:
     branches: [master]
     paths:
-      - 'docs/**'
-      - 'schema/cue_base.cue'
-      - '.github/workflows/docs-release.yml'
+      - "docs/**"
+      - "schema/cue_base.cue"
+      - ".github/workflows/docs-release.yml"
   pull_request:
     paths:
-      - 'docs/**'
-      - 'schema/cue_base.cue'
-      - '.github/workflows/docs-release.yml'
+      - "docs/**"
+      - "schema/cue_base.cue"
+      - ".github/workflows/docs-release.yml"
   workflow_dispatch:
 
 permissions:

@@ -35,7 +35,7 @@ import (
 
 type testcase struct {
 	name        string
-	schemaSrc         string
+	schemaSrc   string
 	inputTuples []string
 	maxDepth    int
 

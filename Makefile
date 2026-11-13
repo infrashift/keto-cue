@@ -27,7 +27,7 @@ PRETTIER_VERSION=$(shell cat package.json | jq -r '.devDependencies["prettier"] 
 
 .PHONY: format
 format: .bin/ory
-	.bin/ory dev headers copyright --type=open-source --exclude=.bin --exclude=docs --exclude=internal/httpclient --exclude=proto --exclude=oryx
+	.bin/ory dev headers copyright --type=open-source --exclude=.bin --exclude=docs --exclude=scripts/ste-check.py --exclude=internal/httpclient --exclude=proto --exclude=oryx
 	go tool goimports -w -local github.com/ory/keto *.go internal cmd contrib ketoctx ketoapi embedx
 	@echo "Prettier Version: $(PRETTIER_VERSION)"
 	npx --package=prettier@$(PRETTIER_VERSION)  prettier . --write
@@ -175,7 +175,7 @@ CUE_DIRS = schema internal/namespace internal/driver/config cmd/namespace intern
 
 ## lint: check gofmt and run go vet on the keto-cue packages
 lint:
-	@test -z "$$($(GOFMT) -l $(CUE_DIRS))" || { echo "gofmt needed:"; $(GOFMT) -l $(CUE_DIRS); exit 1; }
+	@test -z "$$($(GOFMT) -l $(CUE_DIRS) internal/check internal/expand)" || { echo "gofmt needed:"; $(GOFMT) -l $(CUE_DIRS) internal/check internal/expand; exit 1; }
 	go vet $(CUE_PKGS)
 
 ## test-cue: run the schema, config and engine tests

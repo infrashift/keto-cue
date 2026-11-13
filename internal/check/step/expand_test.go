@@ -36,7 +36,7 @@ func TestExpandSubjectStep_MemberFound(t *testing.T) {
 		{
 			scenario: testhelpers.Scenario{
 				Name:        "1-hop subject-set hit resolves without recursive sub-check",
-				Schema:         namespaceOnlySchema,
+				Schema:      namespaceOnlySchema,
 				InputTuples: []string{"File:f1#viewers@Group:g1#members", "Group:g1#members@User:Alice"},
 			},
 			checkInput:         "File:f1#viewers@User:Alice",
@@ -52,8 +52,8 @@ func TestExpandSubjectStep_MemberFound(t *testing.T) {
 		},
 		{
 			scenario: testhelpers.Scenario{
-				Name: "2-hop subject-set hit resolves without recursive sub-check",
-				Schema:  namespaceOnlySchema,
+				Name:   "2-hop subject-set hit resolves without recursive sub-check",
+				Schema: namespaceOnlySchema,
 				InputTuples: []string{
 					"File:f1#viewers@Group:g1#members",
 					"Group:g1#members@Group:g2#members",
@@ -122,8 +122,8 @@ func TestExpandSubjectStep_NotMember(t *testing.T) {
 			// The engine follows every subject-set pointer including leaf subjects stored as SubjectSets.
 			// In only-namespaces setup, everything	in DB is treated as a valid.
 			scenario: testhelpers.Scenario{
-				Name:        "namespace-only-schema: no filter available, recurses into leaf subject-sets",
-				Schema:         `
+				Name: "namespace-only-schema: no filter available, recurses into leaf subject-sets",
+				Schema: `
 					namespaces: {
 						User: {}
 						Group: {}
@@ -157,7 +157,7 @@ func TestExpandSubjectStep_NotMember(t *testing.T) {
 			// SubjectSets. This matches the namespace-only behavior.
 			scenario: testhelpers.Scenario{
 				Name:        "valid-schema: without filter, recurses into leaf subject-sets",
-				Schema:         typedSchema,
+				Schema:      typedSchema,
 				InputTuples: inputTuples,
 			},
 			checkInput:         "File:f1#viewers@User:Bob",
@@ -181,7 +181,7 @@ func TestExpandSubjectStep_NotMember(t *testing.T) {
 			scenario: testhelpers.Scenario{
 				Name:        "valid-schema-strict: with filter, skips leaf subject-sets",
 				Strict:      true,
-				Schema:         typedSchema,
+				Schema:      typedSchema,
 				InputTuples: inputTuples,
 			},
 			checkInput:         "File:f1#viewers@User:Bob",
@@ -248,7 +248,7 @@ func TestExpandSubjectStep_StaleSubjectSet(t *testing.T) {
 			// Alice is found as a direct member of Group:g1#members.
 			scenario: testhelpers.Scenario{
 				Name:        "valid-schema: stale subject-set tuples are followed without schema filter",
-				Schema:         schemaSrc,
+				Schema:      schemaSrc,
 				InputTuples: inputTuples,
 			},
 			expectedMembership: check.IsMember,
@@ -269,7 +269,7 @@ func TestExpandSubjectStep_StaleSubjectSet(t *testing.T) {
 			scenario: testhelpers.Scenario{
 				Name:        "valid-schema-strict: stale subject-set tuples are filtered by schema",
 				Strict:      true,
-				Schema:         schemaSrc,
+				Schema:      schemaSrc,
 				InputTuples: inputTuples,
 			},
 			expectedMembership: check.NotMember,

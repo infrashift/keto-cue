@@ -56,8 +56,8 @@ var ExpansionRecursive = testhelpers.Scenario{
 }
 
 var ExpansionRecursiveNamespaceOnly = testhelpers.Scenario{
-	Name:        ExpansionRecursive.Name + " (namespaces only)",
-	Schema:         `
+	Name: ExpansionRecursive.Name + " (namespaces only)",
+	Schema: `
 		namespaces: {
 			User: {}
 			Group: {}
@@ -95,8 +95,8 @@ var SubjectSetExpansion3Hop = testhelpers.Scenario{
 }
 
 var SubjectSetExpansion3HopNamespacesOnly = testhelpers.Scenario{
-	Name:        SubjectSetExpansion3Hop.Name + " (namespaces only)",
-	Schema:         `
+	Name: SubjectSetExpansion3Hop.Name + " (namespaces only)",
+	Schema: `
 		namespaces: {
 			User: {}
 			Group: {}
