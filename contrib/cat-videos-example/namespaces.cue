@@ -6,7 +6,7 @@ package keto
 namespaces: {
 	User: {}
 	Video: relations: {
-		view: types: ["User", "Video#owner"]
-		owner: types: ["User"]
+		view: ["User", "Video#owner"]
+		owner: ["User"]
 	}
 }

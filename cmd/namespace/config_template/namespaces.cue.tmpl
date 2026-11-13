@@ -7,17 +7,18 @@ package keto
 //
 //	File: {
 //		relations: {
-//			parents: types: ["File", "Folder"]
-//			viewers: types: ["User", "Group#members"]
+//			parents: ["File", "Folder"]
+//			viewers: ["User", "Group#members"]
+//			owners: ["User"]
 //		}
-//		permissions: view: {
-//			op: "or"
-//			children: [
-//				{op: "direct", relation: "viewers"},
-//				{op: "tupleToSubjectSet", tupleSetRelation: "parents", computedSubjectSet: "view"},
-//			]
+//		permissions: {
+//			view: or: ["viewers", "owners", "parents->view"]
+//			edit: and: ["owners", {not: "parents->locked"}]
 //		}
 //	}
+//
+// A rewrite is "relation", "tupleSetRelation->computedSubjectSet",
+// {or: [...]}, {and: [...]} or {not: ...}.
 namespaces: {
 {{- range .Namespaces }}
 	{{ . }}: {}

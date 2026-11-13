@@ -5,6 +5,7 @@ package schema
 
 import (
 	"fmt"
+	"strings"
 
 	cueast "cuelang.org/go/cue/ast"
 	"cuelang.org/go/cue/format"
@@ -41,18 +42,13 @@ func formatNamespace(n namespace) cueast.Expr {
 		switch {
 		case len(r.Types) == 0 && r.SubjectSetRewrite != nil:
 			permissions = append(permissions, cueast.NewStringLabel(r.Name), formatTopRewrite(r.SubjectSetRewrite))
+		case r.SubjectSetRewrite == nil && len(r.Types) > 0:
+			// The short form of a relation is its list of types.
+			relations = append(relations, cueast.NewStringLabel(r.Name), formatTypes(r.Types))
 		default:
 			var fields []any
 			if len(r.Types) > 0 {
-				types := make([]cueast.Expr, 0, len(r.Types))
-				for _, t := range r.Types {
-					s := t.Namespace
-					if t.Relation != "" {
-						s += "#" + t.Relation
-					}
-					types = append(types, cueast.NewString(s))
-				}
-				fields = append(fields, cueast.NewIdent("types"), cueast.NewList(types...))
+				fields = append(fields, cueast.NewIdent("types"), formatTypes(r.Types))
 			}
 			if r.SubjectSetRewrite != nil {
 				fields = append(fields, cueast.NewIdent("rewrite"), formatTopRewrite(r.SubjectSetRewrite))
@@ -71,6 +67,18 @@ func formatNamespace(n namespace) cueast.Expr {
 	return cueast.NewStruct(fields...)
 }
 
+func formatTypes(types []ast.RelationType) cueast.Expr {
+	list := make([]cueast.Expr, 0, len(types))
+	for _, t := range types {
+		s := t.Namespace
+		if t.Relation != "" {
+			s += "#" + t.Relation
+		}
+		list = append(list, cueast.NewString(s))
+	}
+	return cueast.NewList(list...)
+}
+
 // formatTopRewrite unwraps the implicit "or" that wraps a single leaf, because
 // Parse adds it back.
 func formatTopRewrite(rw *ast.SubjectSetRewrite) cueast.Expr {
@@ -80,45 +88,61 @@ func formatTopRewrite(rw *ast.SubjectSetRewrite) cueast.Expr {
 	return formatRewrite(rw)
 }
 
+// formatRewrite renders a rewrite in the short forms. A relation name that a
+// short form cannot hold, for example one that contains "->", keeps the long
+// form.
 func formatRewrite(child ast.Child) cueast.Expr {
 	switch c := child.(type) {
 	case *ast.SubjectSetRewrite:
-		op := opOr
+		op := shortOr
 		if c.Operation == ast.OperatorAnd {
-			op = opAnd
+			op = shortAnd
 		}
 		children := make([]cueast.Expr, 0, len(c.Children))
+		allLeaves := true
 		for _, ch := range c.Children {
-			children = append(children, formatRewrite(ch))
+			e := formatRewrite(ch)
+			if _, ok := e.(*cueast.BasicLit); !ok {
+				allLeaves = false
+			}
+			children = append(children, e)
 		}
 		list := cueast.NewList(children...)
+		if allLeaves {
+			return inlineStruct(cueast.NewIdent(op), list)
+		}
 		for _, e := range list.Elts {
 			cueast.SetRelPos(e, token.Newline)
 		}
 		list.Rbrack = token.Newline.Pos()
-		return cueast.NewStruct(
-			cueast.NewIdent("op"), cueast.NewString(op),
-			cueast.NewIdent("children"), list,
-		)
+		return cueast.NewStruct(cueast.NewIdent(op), list)
 	case *ast.ComputedSubjectSet:
+		if isShortName(c.Relation) {
+			return cueast.NewString(c.Relation)
+		}
 		return inlineStruct(
 			cueast.NewIdent("op"), cueast.NewString(opDirect),
 			cueast.NewIdent("relation"), cueast.NewString(c.Relation),
 		)
 	case *ast.TupleToSubjectSet:
+		if isShortName(c.Relation) && isShortName(c.ComputedSubjectSetRelation) {
+			return cueast.NewString(c.Relation + traverseArrow + c.ComputedSubjectSetRelation)
+		}
 		return inlineStruct(
 			cueast.NewIdent("op"), cueast.NewString(opTupleToSubjectSet),
 			cueast.NewIdent("tupleSetRelation"), cueast.NewString(c.Relation),
 			cueast.NewIdent("computedSubjectSet"), cueast.NewString(c.ComputedSubjectSetRelation),
 		)
 	case *ast.InvertResult:
-		return cueast.NewStruct(
-			cueast.NewIdent("op"), cueast.NewString(opInvert),
-			cueast.NewIdent("child"), formatRewrite(c.Child),
-		)
+		return inlineStruct(cueast.NewIdent(shortNot), formatRewrite(c.Child))
 	default:
 		panic(fmt.Sprintf("unknown rewrite node %T", child))
 	}
+}
+
+// isShortName reports whether a relation name fits in a short rewrite.
+func isShortName(name string) bool {
+	return name != "" && name == strings.TrimSpace(name) && !strings.Contains(name, traverseArrow)
 }
 
 // inlineStruct returns a struct that the formatter prints on one line.

@@ -56,6 +56,14 @@ Tracking: [ISSUE-006](.okfw/issues/issue-006-cue-schema-documentation--01a1d39e1
 - [x] Write `docs/cue_permission_schema.md` with an OPL to CUE table.
 - [x] Mark `docs/ory_permission_language_spec.md` as superseded. Update the OPL examples in `README.md`.
 
+## Phase 6: Short forms for rewrites and relations
+Tracking: [ISSUE-008](.okfw/issues/issue-008-short-forms-for-cue-rewrites-and-relations--01a1d4cf27e7.md)
+
+- [x] Accept `"relation"`, `"tupleSetRelation->computedSubjectSet"`, `{or: [...]}`, `{and: [...]}` and `{not: ...}` as rewrites. Accept a list of types as a relation.
+- [x] Compile each short form to the same AST as its long form. Test the errors of each short form.
+- [x] Make `FormatCUE` write the short forms. Convert the `contrib` examples and the benchmark fixture.
+- [x] Show the short forms in the user document, the README and the spec concept.
+
 ## Verification
 Run these gates after each phase. Do not start the next phase while a gate fails.
 

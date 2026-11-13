@@ -7,23 +7,17 @@ namespaces: {
 	User: {}
 	Project: {
 		relations: {
-			owner: types: ["User"]
-			developer: types: ["User"]
+			owner: ["User"]
+			developer: ["User"]
 		}
 		permissions: {
-			isOwner: {op: "direct", relation: "owner"}
-			isOwnerOrDeveloper: {
-				op: "or"
-				children: [
-					{op: "direct", relation: "owner"},
-					{op: "direct", relation: "developer"},
-				]
-			}
-			writeCollaborator: {op: "direct", relation: "isOwner"}
-			readCollaborator: {op: "direct", relation: "isOwnerOrDeveloper"}
-			deleteProject: {op: "direct", relation: "isOwner"}
-			writeProject: {op: "direct", relation: "isOwnerOrDeveloper"}
-			readProject: {op: "direct", relation: "isOwnerOrDeveloper"}
+			isOwner: "owner"
+			isOwnerOrDeveloper: or: ["owner", "developer"]
+			writeCollaborator: "isOwner"
+			readCollaborator:  "isOwnerOrDeveloper"
+			deleteProject:     "isOwner"
+			writeProject:      "isOwnerOrDeveloper"
+			readProject:       "isOwnerOrDeveloper"
 		}
 	}
 }

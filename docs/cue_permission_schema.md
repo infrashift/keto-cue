@@ -29,19 +29,13 @@ package keto
 
 namespaces: {
 	User: {}
-	Group: relations: members: types: ["User", "Group#members"]
+	Group: relations: members: ["User", "Group#members"]
 	Folder: {
 		relations: {
-			parents: types: ["Folder"]
-			viewers: types: ["User", "Group#members"]
+			parents: ["Folder"]
+			viewers: ["User", "Group#members"]
 		}
-		permissions: view: {
-			op: "or"
-			children: [
-				{op: "direct", relation: "viewers"},
-				{op: "tupleToSubjectSet", tupleSetRelation: "parents", computedSubjectSet: "view"},
-			]
-		}
+		permissions: view: or: ["viewers", "parents->view"]
 	}
 }
 ```
@@ -56,47 +50,73 @@ A relation lists the subject types that a relation tuple can hold:
 | `"Group#members"` | The subject set `members` of an object in `Group`. |
 | `{namespace: "Group", relation: "members"}` | The same subject set, in the long form. |
 
-A relation can also have a `rewrite`, with the same form as a permission.
+Write the list of types as the value of the relation: `owners: ["User"]`. The long form is `owners: types: ["User"]`. A relation can also have a `rewrite`, with the same form as a permission. A relation with a rewrite uses the long form: `{types: ["User"], rewrite: "owners"}`.
 
 ### Permissions
 
-A permission is a subject-set rewrite. Each rewrite node has an `op` field:
+A permission is a subject-set rewrite. Use the short forms:
 
-| `op` | Fields | Check result |
+| Rewrite | Check result |
+|---|---|
+| `"viewers"` | Allowed when the relation or permission `viewers` of the same object allows. |
+| `"parents->view"` | Follows each object in `parents` and checks `view` on it. |
+| `{or: [a, b, ...]}` | Allowed when one rewrite allows. |
+| `{and: [a, b, ...]}` | Allowed when all rewrites allow. |
+| `{not: a}` | Inverts the result of `a`. |
+
+A rewrite node has one of the fields `or`, `and`, `not` and `op`. CUE lets you drop the braces of a struct with one field, so `view: {or: [...]}` and `view: or: [...]` are the same. Nest the forms to make a tree:
+
+```cue
+permissions: delete: and: ["owners", {not: "parents->locked"}]
+```
+
+The long form has an `op` field. Use it when a relation name contains `->` or starts or ends with a space:
+
+| `op` | Fields | Short form |
 |---|---|---|
-| `or` | `children` (one or more rewrites) | Allowed when one child allows. |
-| `and` | `children` (one or more rewrites) | Allowed when all children allow. |
-| `direct` | `relation` | Allowed when the relation or permission of the same object allows. |
-| `tupleToSubjectSet` | `tupleSetRelation`, `computedSubjectSet` | Follows each object in `tupleSetRelation` and checks `computedSubjectSet` on it. |
-| `invert` | `child` | Inverts the result of the child. |
+| `or` | `children` (one or more rewrites) | `{or: [...]}` |
+| `and` | `children` (one or more rewrites) | `{and: [...]}` |
+| `direct` | `relation` | `"relation"` |
+| `tupleToSubjectSet` | `tupleSetRelation`, `computedSubjectSet` | `"tupleSetRelation->computedSubjectSet"` |
+| `invert` | `child` | `{not: ...}` |
+
+A schema can mix the short and the long forms.
 
 ## OPL to CUE
 
 | OPL | CUE |
 |---|---|
 | `class Doc implements Namespace {}` | `namespaces: Doc: {}` |
-| `related: { owners: User[] }` | `relations: owners: types: ["User"]` |
-| `owners: (User \| SubjectSet<Group, "members">)[]` | `owners: types: ["User", "Group#members"]` |
-| `this.related.owners.includes(ctx.subject)` | `{op: "direct", relation: "owners"}` |
-| `this.permits.edit(ctx)` | `{op: "direct", relation: "edit"}` |
-| `this.related.parents.traverse((p) => p.permits.view(ctx))` | `{op: "tupleToSubjectSet", tupleSetRelation: "parents", computedSubjectSet: "view"}` |
-| `a \|\| b` | `{op: "or", children: [a, b]}` |
-| `a && b` | `{op: "and", children: [a, b]}` |
-| `!a` | `{op: "invert", child: a}` |
+| `related: { owners: User[] }` | `relations: owners: ["User"]` |
+| `owners: (User \| SubjectSet<Group, "members">)[]` | `owners: ["User", "Group#members"]` |
+| `this.related.owners.includes(ctx.subject)` | `"owners"` |
+| `this.permits.edit(ctx)` | `"edit"` |
+| `this.related.parents.traverse((p) => p.permits.view(ctx))` | `"parents->view"` |
+| `a \|\| b` | `{or: [a, b]}` |
+| `a && b` | `{and: [a, b]}` |
+| `!a` | `{not: a}` |
 
 ## Reuse
 
-The top level of a schema is open. Declare helper definitions next to `namespaces`. Use hidden fields (`_name`) as parameters:
+The top level of a schema is open. Declare helper values next to `namespaces`, and refer to them. Use a comprehension to add the values of a list to another list:
 
 ```cue
-#viaParent: {
-	_permission:        string
-	op:                 "tupleToSubjectSet"
-	tupleSetRelation:   "parents"
-	computedSubjectSet: _permission
-}
+#editors: ["owners", "parents->edit"]
 
-namespaces: Folder: permissions: view: #viaParent & {_permission: "view"}
+namespaces: Folder: permissions: {
+	edit: or: #editors
+	view: or: ["viewers", "parents->view", for e in #editors {e}]
+}
+```
+
+A comprehension can also make a permission for each entry of a list:
+
+```cue
+#actions: ["read", "write", "delete"]
+
+namespaces: Doc: permissions: {
+	for a in #actions {(a): or: ["owners", "parents->\(a)"]}
+}
 ```
 
 A schema can import the CUE standard library, for example `strings` or `list`. A schema cannot import other packages or modules.
@@ -112,11 +132,11 @@ keto namespace validate ./schema
 Each error names the file, the line and the column, and shows the source:
 
 ```text
-schema/doc.cue: error from 3:43 to 3:49: namespace "A" did not declare relation "nope"
+schema/doc.cue: error from 3:18 to 3:24: namespace "A" did not declare relation "nope"
 
-   2 | 	relations: r: types: ["A"]
-   3 | 	permissions: p: {op: "direct", relation: "nope"}
-     | 	                                         ^~~~~~
+   2 | 	relations: r: ["A"]
+   3 | 	permissions: p: "nope"
+     | 	                ^~~~~~
 ```
 
 The syntax-check API (`POST /opl/syntax/check` and the gRPC `SyntaxService.Check`) checks one CUE file. The endpoint keeps its OPL name for API compatibility. Lines and columns start at 1.
@@ -126,7 +146,9 @@ The syntax-check API (`POST /opl/syntax/check` and the gRPC `SyntaxService.Check
 The compiler applies these rules:
 
 - The base schema is closed. A misspelled field is an error.
-- Each rewrite has the fields of its `op` and no other rewrite fields.
+- Each rewrite node has one of the fields `op`, `or`, `and` and `not`.
+- Each rewrite with `op` has the fields of its `op` and no other rewrite fields.
+- A short rewrite is `"relation"` or `"tupleSetRelation->computedSubjectSet"`, with no empty name.
 - Each referenced namespace and relation exists.
 - For `tupleToSubjectSet`, each type of `tupleSetRelation` declares `computedSubjectSet`.
 - A name cannot be a relation and a permission in the same namespace.

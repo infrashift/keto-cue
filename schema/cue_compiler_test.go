@@ -437,6 +437,7 @@ func FuzzParseCUE(f *testing.F) {
 	for _, tc := range cueTestCases {
 		f.Add(tc.input)
 	}
+	f.Add(shortFullExample)
 	f.Fuzz(func(t *testing.T, input string) {
 		ns, errs := Parse(src(input))
 		if len(errs) > 0 && ns != nil {
@@ -471,4 +472,213 @@ func TestRepositorySchemasCompile(t *testing.T) {
 		}))
 	}
 	assert.GreaterOrEqual(t, n, 5)
+}
+
+// shortFullExample is the "full example" test case in the short forms.
+const shortFullExample = `
+package keto
+
+namespaces: {
+	User: relations: manager: ["User"]
+	Group: relations: members: ["User", "Group"]
+	Folder: {
+		relations: {
+			parents: ["File"]
+			viewers: ["Group#members"]
+		}
+		permissions: view: "viewers"
+	}
+	File: {
+		relations: {
+			parents: ["File", "Folder"]
+			viewers: ["User", "Group#members"]
+			owners: ["User", {namespace: "Group", relation: "members"}]
+			siblings: ["File"]
+		}
+		permissions: {
+			view: or: [
+				{and: ["parents->viewers", "parents -> view"]},
+				{or: ["viewers", "viewers", "viewers"]},
+				"owners",
+			]
+			edit:   "owners"
+			not:    not: "owners"
+			rename: "siblings->edit"
+		}
+	}
+}
+`
+
+func TestParseShortForms(t *testing.T) {
+	want, errs := Parse(src(cueTestCases[0].input))
+	require.Empty(t, errs)
+	got, errs := Parse(src(shortFullExample))
+	for _, e := range errs {
+		t.Error(e)
+	}
+	assert.Equal(t, normalize(want), normalize(got))
+
+	t.Run("case=forms mix", func(t *testing.T) {
+		long, errs := Parse(src(`namespaces: A: {
+	relations: {r: types: ["A"], s: types: ["A"]}
+	permissions: p: {op: "or", children: [
+		{op: "direct", relation: "r"},
+		{op: "invert", child: {op: "tupleToSubjectSet", tupleSetRelation: "s", computedSubjectSet: "r"}},
+	]}
+}`))
+		require.Empty(t, errs)
+		mixed, errs := Parse(src(`namespaces: A: {
+	relations: {r: ["A"], s: {types: ["A"]}}
+	permissions: p: or: [{op: "direct", relation: "r"}, {not: "s->r"}]
+}`))
+		require.Empty(t, errs)
+		assert.Equal(t, normalize(long), normalize(mixed))
+	})
+
+	t.Run("case=comprehension", func(t *testing.T) {
+		ns, errs := Parse(src(`#actions: ["read", "write"]
+#editors: ["owners", "parents->edit"]
+namespaces: User: {}
+namespaces: Doc: {
+	relations: {parents: ["Doc"], owners: ["User"]}
+	permissions: {
+		for a in #actions {(a): or: ["owners", "parents->\(a)"]}
+		edit: or: [for e in #editors {e}, "write"]
+	}
+}`))
+		require.Empty(t, errs)
+		m := nsMap(ns)
+		require.Len(t, m["Doc"], 5)
+		assert.Equal(t, &ast.TupleToSubjectSet{Relation: "parents", ComputedSubjectSetRelation: "write"},
+			m["Doc"][3].SubjectSetRewrite.Children[1])
+		assert.Len(t, m["Doc"][4].SubjectSetRewrite.Children, 3)
+	})
+
+	t.Run("case=comprehension error is reported once", func(t *testing.T) {
+		_, errs := Parse(src(`namespaces: Doc: permissions: {
+	for a in ["read", "write"] {(a): "nope"}
+}`))
+		require.Len(t, errs, 1)
+		assert.Equal(t, `namespace "Doc" did not declare relation "nope"`, errs[0].Message())
+	})
+
+	t.Run("case=relation rewrite", func(t *testing.T) {
+		ns, errs := Parse(src(`namespaces: A: relations: {
+	r: ["A"]
+	s: {types: ["A"], rewrite: "r"}
+}`))
+		require.Empty(t, errs)
+		require.Len(t, ns[0].Relations, 2)
+		assert.Equal(t, &ast.SubjectSetRewrite{Children: ast.Children{&ast.ComputedSubjectSet{Relation: "r"}}},
+			ns[0].Relations[1].SubjectSetRewrite)
+	})
+}
+
+func TestParseShortFormErrors(t *testing.T) {
+	for _, tc := range []struct {
+		name, input, message string
+		line                 int
+	}{{
+		name:    "missing computed relation",
+		input:   "namespaces: A: {\n\trelations: r: [\"A\"]\n\tpermissions: p: \"r->\"\n}",
+		message: `the rewrite "r->" is not valid; use "relation" or "tupleSetRelation->computedSubjectSet"`,
+		line:    3,
+	}, {
+		name:    "missing tuple-set relation",
+		input:   "namespaces: A: {\n\trelations: r: [\"A\"]\n\tpermissions: p: \"->r\"\n}",
+		message: `the rewrite "->r" is not valid`,
+		line:    3,
+	}, {
+		name:    "two arrows",
+		input:   "namespaces: A: {\n\trelations: r: [\"A\"]\n\tpermissions: p: \"r->r->r\"\n}",
+		message: `the rewrite "r->r->r" is not valid`,
+		line:    3,
+	}, {
+		name:    "empty string",
+		input:   "namespaces: A: {\n\tpermissions: p: \"\"\n}",
+		message: "namespaces.A.permissions.p",
+		line:    2,
+	}, {
+		name:    "op and short operator",
+		input:   "namespaces: A: {\n\trelations: r: [\"A\"]\n\tpermissions: p: {op: \"or\", or: [\"r\"]}\n}",
+		message: `a rewrite can have only one of the fields "op" and "or"`,
+		line:    3,
+	}, {
+		name:    "two short operators",
+		input:   "namespaces: A: {\n\trelations: r: [\"A\"]\n\tpermissions: p: {and: [\"r\"], not: \"r\"}\n}",
+		message: `a rewrite can have only one of the fields "and" and "not"`,
+		line:    3,
+	}, {
+		name:    "no form",
+		input:   "namespaces: A: {\n\tpermissions: p: {}\n}",
+		message: `a rewrite requires one of the fields "op", "or", "and" or "not"`,
+		line:    2,
+	}, {
+		name:    "op field in short operator",
+		input:   "namespaces: A: {\n\trelations: r: [\"A\"]\n\tpermissions: p: {not: \"r\",\n\t\trelation: \"r\"}\n}",
+		message: `field "relation" is not allowed in a rewrite with the field "not"`,
+		line:    4,
+	}, {
+		name:    "misspelled short operator",
+		input:   "namespaces: A: {\n\trelations: r: [\"A\"]\n\tpermissions: p: {orr: [\"r\"]}\n}",
+		message: "namespaces.A.permissions.p.orr: field not allowed",
+		line:    3,
+	}, {
+		name:    "empty short operator list",
+		input:   "namespaces: A: permissions: p: or: []",
+		message: "namespaces.A.permissions.p.or",
+	}, {
+		name:    "dangling short relation",
+		input:   "namespaces: A: {\n\trelations: r: [\"A\"]\n\tpermissions: p: or: [\"r\", \"nope\"]\n}",
+		message: `namespace "A" did not declare relation "nope"`,
+		line:    3,
+	}, {
+		name:    "short traversal to missing relation",
+		input:   "namespaces: {\n\tB: {}\n\tA: {\n\t\trelations: parents: [\"B\"]\n\t\tpermissions: p: \"parents->view\"\n\t}\n}",
+		message: `relation "view" was not declared in namespace "B"`,
+		line:    5,
+	}, {
+		name:    "unknown namespace in short relation",
+		input:   "namespaces: A: {\n\trelations: r: [\"Nope\"]\n}",
+		message: `namespace "Nope" was not declared`,
+		line:    2,
+	}, {
+		name:    "misspelled relation field",
+		input:   "namespaces: A: {\n\trelations: r: {typs: [\"A\"]}\n}",
+		message: "namespaces.A.relations.r.typs: field not allowed",
+		line:    2,
+	}, {
+		name:    "wrong rewrite kind",
+		input:   "namespaces: A: {\n\tpermissions: p: true\n}",
+		message: `namespaces.A.permissions.p: true is not allowed; use "relation", "tupleSetRelation->computedSubjectSet", {or: [...]}, {and: [...]}, {not: ...} or {op: ...}`,
+		line:    2,
+	}, {
+		name:    "wrong relation kind",
+		input:   "namespaces: A: {\n\trelations: r: \"A\"\n}",
+		message: `namespaces.A.relations.r: "A" is not allowed; use a list of types or {types?: [...], rewrite?: ...}`,
+		line:    2,
+	}, {
+		name: "short form nested too deeply",
+		input: "namespaces: A: {\n\trelations: r: [\"A\"]\n\tpermissions: p: " +
+			strings.Repeat("{not: ", 12) + `"r"` + strings.Repeat("}", 12) + "\n}",
+		message: "expression nested too deeply; maximal nesting depth is 10",
+		line:    3,
+	}} {
+		t.Run("case="+tc.name, func(t *testing.T) {
+			ns, errs := Parse(src(tc.input))
+			assert.Nil(t, ns)
+			require.NotEmpty(t, errs)
+			var msgs []string
+			for _, e := range errs {
+				msgs = append(msgs, e.Error())
+			}
+			all := strings.Join(msgs, "\n")
+			assert.Contains(t, all, tc.message)
+			if tc.line > 0 {
+				assert.Equal(t, tc.line, errs[0].Start().Line, all)
+				assert.Equal(t, "schema.cue", errs[0].Filename())
+			}
+			t.Log(all)
+		})
+	}
 }

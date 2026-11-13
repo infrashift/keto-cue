@@ -13,7 +13,7 @@ description: "The contract for keto-cue schemas: the base schema, the rewrite op
 
 # CUE permission schema
 
-**Status:** Implemented in `schema/cue_base.cue`, `schema/cue_compiler.go` and `schema/cue_checks.go` ([ISSUE-002](/issues/issue-002-cue-compiler-next-to-the-opl-parser--01a1d39e1264.md)).
+**Status:** Implemented in `schema/cue_base.cue`, `schema/cue_compiler.go` and `schema/cue_checks.go` ([ISSUE-002](/issues/issue-002-cue-compiler-next-to-the-opl-parser--01a1d39e1264.md)). The short forms came in [ISSUE-008](/issues/issue-008-short-forms-for-cue-rewrites-and-relations--01a1d4cf27e7.md).
 
 ## Shape
 A schema declares `namespaces`. Each key is a namespace name. Each namespace has optional `relations` and optional `permissions`.
@@ -21,47 +21,42 @@ A schema declares `namespaces`. Each key is a namespace name. Each namespace has
 ```cue
 namespaces: {
 	User: {}
-	Group: relations: members: types: ["User"]
+	Group: relations: members: ["User"]
 	Document: {
 		relations: {
-			owners: types: ["User", "Group#members"]
-			parents: types: ["Folder"]
+			owners: ["User", "Group#members"]
+			parents: ["Folder"]
 		}
-		permissions: view: {
-			op: "or"
-			children: [
-				{op: "direct", relation: "owners"},
-				{op: "tupleToSubjectSet", tupleSetRelation: "parents", computedSubjectSet: "view"},
-			]
-		}
+		permissions: view: or: ["owners", "parents->view"]
 	}
 }
 ```
 
 ## Types
-A relation type is `"Namespace"`, `"Namespace#relation"` or `{namespace: "Namespace", relation: "relation"}`.
+A relation type is `"Namespace"`, `"Namespace#relation"` or `{namespace: "Namespace", relation: "relation"}`. A relation is its list of types (`owners: ["User"]`) or a struct `{types?: [...], rewrite?: ...}`.
 
 ## Rewrite operations
-| `op` | Fields | AST node |
-|---|---|---|
-| `or` | `children` (one or more) | `*ast.SubjectSetRewrite{Operation: ast.OperatorOr}` |
-| `and` | `children` (one or more) | `*ast.SubjectSetRewrite{Operation: ast.OperatorAnd}` |
-| `direct` | `relation` | `*ast.ComputedSubjectSet` |
-| `tupleToSubjectSet` | `tupleSetRelation`, `computedSubjectSet` | `*ast.TupleToSubjectSet` |
-| `invert` | `child` | `*ast.InvertResult` |
+A rewrite is a short form or a node with one of the fields `op`, `or`, `and` and `not` ([ADR-0007](/decisions/adr-0007-short-rewrite-forms-in-the-base-schema-compiled-in-go--01a1d4cf57cd.md)).
+
+| Short form | `op` | Fields | AST node |
+|---|---|---|---|
+| `{or: [...]}` | `or` | `children` (one or more) | `*ast.SubjectSetRewrite{Operation: ast.OperatorOr}` |
+| `{and: [...]}` | `and` | `children` (one or more) | `*ast.SubjectSetRewrite{Operation: ast.OperatorAnd}` |
+| `"relation"` | `direct` | `relation` | `*ast.ComputedSubjectSet` |
+| `"tupleSet->computed"` | `tupleToSubjectSet` | `tupleSetRelation`, `computedSubjectSet` | `*ast.TupleToSubjectSet` |
+| `{not: ...}` | `invert` | `child` | `*ast.InvertResult` |
+
+`FormatCUE` writes the short forms. A relation name that contains `->`, or that starts or ends with a space, keeps the long form.
 
 ## Helpers
-The top level of a schema stays open. A schema can declare definitions next to `namespaces` and use hidden fields (`_name`) as parameters:
+The top level of a schema stays open. A schema can declare values next to `namespaces` and use comprehensions:
 
 ```cue
-#viaMember: {
-	_rel:               string
-	op:                 "tupleToSubjectSet"
-	tupleSetRelation:   _rel
-	computedSubjectSet: "member"
-}
+#actions: ["read", "write"]
 
-namespaces: Doc: permissions: view: #viaMember & {_rel: "readers"}
+namespaces: Doc: permissions: {
+	for a in #actions {(a): or: ["owners", "parents->\(a)"]}
+}
 ```
 
 ## Files and imports
@@ -80,4 +75,5 @@ Each error names the file, the line and the column ([ADR-0005](/decisions/adr-00
 - A name in both `relations` and `permissions` is an error.
 - Each referenced namespace and relation exists. The compiler reports each missing reference.
 - Rewrites nest to a depth of 10 or less.
-- A value that matches no alternative of a base-schema disjunction gives one error. The error names the allowed values.
+- A value that matches no alternative of a base-schema disjunction gives one error. When an error inside the value explains the conflict, the compiler reports that error. Otherwise the error names the allowed values.
+- The compiler reports an error with the same message at the same position once.

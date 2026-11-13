@@ -18,13 +18,24 @@ package keto
 
 #RewriteOp: "or" | "and" | "direct" | "tupleToSubjectSet" | "invert"
 
-// A subject-set rewrite. The compiler checks which fields each op requires:
-//   or, and            children
-//   direct             relation
-//   tupleToSubjectSet  tupleSetRelation, computedSubjectSet
-//   invert             child
-#Rewrite: {
-	op: #RewriteOp
+// A rewrite is a short form or a node.
+#Rewrite: #RewriteRef | #RewriteNode
+
+// The short form of a leaf rewrite:
+//   "relation"            direct
+//   "tupleSet->computed"  tupleToSubjectSet
+#RewriteRef: string & !=""
+
+// A rewrite node. It has exactly one of the fields op, or, and and not. The
+// compiler checks which fields each op requires:
+//   op: "or", op: "and"          children
+//   op: "direct"                 relation
+//   op: "tupleToSubjectSet"      tupleSetRelation, computedSubjectSet
+//   op: "invert"                 child
+//   or, and                      a list of rewrites, with no other field
+//   not                          one rewrite, with no other field
+#RewriteNode: {
+	op?: #RewriteOp
 
 	children?: [#Rewrite, ...#Rewrite]
 
@@ -34,10 +45,19 @@ package keto
 	computedSubjectSet?: string & !=""
 
 	child?: #Rewrite
+
+	or?:  [#Rewrite, ...#Rewrite]
+	and?: [#Rewrite, ...#Rewrite]
+	not?: #Rewrite
 }
 
-#Relation: {
-	types?: [...(#SubjectType | #SubjectTypeRef)]
+// A relation is a list of subject types, or a struct with types and a rewrite.
+#Relation: #RelationTypes | #RelationNode
+
+#RelationTypes: [...(#SubjectType | #SubjectTypeRef)]
+
+#RelationNode: {
+	types?:   #RelationTypes
 	rewrite?: #Rewrite
 }
 

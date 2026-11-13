@@ -26,8 +26,11 @@ performant authorization server for managing permissions at scale.
 > namespaces: {
 > 	User: {}
 > 	Document: {
-> 		relations: readers: types: ["User"]
-> 		permissions: read: {op: "direct", relation: "readers"}
+> 		relations: {
+> 			parents: ["Document"]
+> 			readers: ["User"]
+> 		}
+> 		permissions: read: or: ["readers", "parents->read"]
 > 	}
 > }
 > CUE

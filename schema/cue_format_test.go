@@ -73,6 +73,34 @@ func TestFormatCUE(t *testing.T) {
 	t.Logf("\n%s", out)
 	s := string(out)
 	assert.True(t, strings.HasPrefix(s, "package keto\n"))
-	assert.Contains(t, s, `edit: {op: "direct", relation: "owners"}`)
-	assert.Contains(t, s, `viewers: types: ["User", "Group#members"]`)
+	assert.Contains(t, s, `edit: "owners"`)
+	assert.Contains(t, s, `viewers: ["User", "Group#members"]`)
+	assert.Contains(t, s, `rename: "siblings->edit"`)
+	assert.Contains(t, s, `not: not: "owners"`)
+	assert.Contains(t, s, `{and: ["parents->viewers", "parents->view"]},`)
+}
+
+// TestFormatCUELongForms checks that names which a short form cannot hold keep
+// the long form.
+func TestFormatCUELongForms(t *testing.T) {
+	ns, errs := Parse(SourceFile{Name: "input.cue", Content: []byte(`namespaces: A: {
+	relations: {"a->b": ["A"], " c": ["A"], d: {types: ["A"], rewrite: "d"}, e: {}}
+	permissions: {
+		p: {op: "direct", relation: "a->b"}
+		q: {op: "tupleToSubjectSet", tupleSetRelation: " c", computedSubjectSet: "p"}
+	}
+}`)})
+	require.Empty(t, errs)
+	out, err := FormatCUE(ns)
+	require.NoError(t, err)
+	t.Logf("\n%s", out)
+	s := string(out)
+	assert.Contains(t, s, `p: {op: "direct", relation: "a->b"}`)
+	assert.Contains(t, s, `q: {op: "tupleToSubjectSet", tupleSetRelation: " c", computedSubjectSet: "p"}`)
+	assert.Contains(t, s, `d: {`)
+	assert.Contains(t, s, `e: {}`)
+
+	got, errs := Parse(SourceFile{Name: "formatted.cue", Content: out})
+	require.Empty(t, errs)
+	assert.Equal(t, normalize(ns), normalize(got))
 }

@@ -7,7 +7,7 @@ namespaces: {
 	User: {}
 	ApiKey: {}
 	File: {
-		relations: viewer: types: ["User", "ApiKey"]
-		permissions: view: {op: "direct", relation: "viewer"}
+		relations: viewer: ["User", "ApiKey"]
+		permissions: view: "viewer"
 	}
 }

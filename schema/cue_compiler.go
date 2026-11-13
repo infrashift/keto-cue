@@ -41,10 +41,22 @@ const (
 	opDirect            = "direct"
 	opTupleToSubjectSet = "tupleToSubjectSet"
 	opInvert            = "invert"
+
+	// The short operator fields of a rewrite node.
+	shortOr  = "or"
+	shortAnd = "and"
+	shortNot = "not"
+
+	// traverseArrow separates the two relations of a short tupleToSubjectSet
+	// rewrite: "tupleSetRelation->computedSubjectSet".
+	traverseArrow = "->"
 )
 
-// rewriteFields lists the optional fields of a #Rewrite and the op that uses
-// each of them.
+// shortOps are the short operator fields, in the order that errors list them.
+var shortOps = []string{shortOr, shortAnd, shortNot}
+
+// rewriteFields lists the optional fields of a #RewriteNode and the ops that
+// use each of them. The short operator fields belong to no op.
 var rewriteFields = []struct {
 	name string
 	ops  []string
@@ -54,6 +66,9 @@ var rewriteFields = []struct {
 	{"tupleSetRelation", []string{opTupleToSubjectSet}},
 	{"computedSubjectSet", []string{opTupleToSubjectSet}},
 	{"child", []string{opInvert}},
+	{shortOr, nil},
+	{shortAnd, nil},
+	{shortNot, nil},
 }
 
 type (
@@ -233,7 +248,12 @@ func (c *cueCompiler) compileNamespace(name string, v cue.Value) namespace {
 func (c *cueCompiler) compileRelation(nsName, relName string, v cue.Value) ast.Relation {
 	rel := ast.Relation{Name: relName}
 
-	if types := v.LookupPath(cue.MakePath(cue.Str("types"))); types.Exists() {
+	// The short form of a relation is its list of types.
+	types := v
+	if v.IncompleteKind() != cue.ListKind {
+		types = v.LookupPath(cue.MakePath(cue.Str("types")))
+	}
+	if types.Exists() {
 		iter, err := types.List()
 		if err != nil {
 			c.addCUEErr(err)
@@ -303,6 +323,27 @@ func (c *cueCompiler) compileRewrite(nsName string, v cue.Value, nesting int) as
 		c.addErr(at, "expression nested too deeply; maximal nesting depth is %d",
 			expressionNestingMaxDepth)
 		return nil
+	}
+
+	if v.IncompleteKind() == cue.StringKind {
+		return c.compileShortRef(nsName, v)
+	}
+
+	var forms []string
+	for _, f := range append([]string{"op"}, shortOps...) {
+		if v.LookupPath(cue.ParsePath(f)).Exists() {
+			forms = append(forms, f)
+		}
+	}
+	switch {
+	case len(forms) == 0:
+		c.addErr(at, `a rewrite requires one of the fields "op", "or", "and" or "not"`)
+		return nil
+	case len(forms) > 1:
+		c.addErr(at, "a rewrite can have only one of the fields %q and %q", forms[0], forms[1])
+		return nil
+	case forms[0] != "op":
+		return c.compileShortOp(nsName, v, forms[0], nesting)
 	}
 
 	op, err := v.LookupPath(cue.ParsePath("op")).String()
@@ -389,6 +430,75 @@ func (c *cueCompiler) compileRewrite(nsName string, v cue.Value, nesting int) as
 	}
 }
 
+// compileShortRef compiles the short form of a leaf rewrite: "relation" or
+// "tupleSetRelation->computedSubjectSet".
+func (c *cueCompiler) compileShortRef(nsName string, v cue.Value) ast.Child {
+	at := c.rangeOf(v)
+	s, err := v.String()
+	if err != nil {
+		c.addCUEErr(err)
+		return nil
+	}
+
+	rel, computed, isTraverse := strings.Cut(s, traverseArrow)
+	rel, computed = strings.TrimSpace(rel), strings.TrimSpace(computed)
+	if rel == "" || (isTraverse && (computed == "" || strings.Contains(computed, traverseArrow))) {
+		c.addErr(at, `the rewrite %q is not valid; use "relation" or "tupleSetRelation%scomputedSubjectSet"`, s, traverseArrow)
+		return nil
+	}
+
+	c.relationRefs = append(c.relationRefs, relationRef{namespace: nsName, relation: rel, at: at})
+	if !isTraverse {
+		return &ast.ComputedSubjectSet{Relation: rel}
+	}
+	c.traverseRefs = append(c.traverseRefs, traverseRef{namespace: nsName, relation: rel, computed: computed, at: at})
+	return &ast.TupleToSubjectSet{Relation: rel, ComputedSubjectSetRelation: computed}
+}
+
+// compileShortOp compiles a rewrite node with a short operator field: {or:
+// [...]}, {and: [...]} or {not: rewrite}. The node has no other fields.
+func (c *cueCompiler) compileShortOp(nsName string, v cue.Value, op string, nesting int) ast.Child {
+	ok := true
+	for _, f := range rewriteFields {
+		if f.name == op || !v.LookupPath(cue.ParsePath(f.name)).Exists() {
+			continue
+		}
+		c.addErr(c.rangeOf(v.LookupPath(cue.ParsePath(f.name))),
+			"field %q is not allowed in a rewrite with the field %q", f.name, op)
+		ok = false
+	}
+	if !ok {
+		return nil
+	}
+
+	operand := v.LookupPath(cue.ParsePath(op))
+	if op == shortNot {
+		child := c.compileRewrite(nsName, operand, nesting+1)
+		if child == nil {
+			return nil
+		}
+		return &ast.InvertResult{Child: child}
+	}
+
+	iter, err := operand.List()
+	if err != nil {
+		c.addCUEErr(err)
+		return nil
+	}
+	rw := &ast.SubjectSetRewrite{Operation: ast.OperatorOr}
+	if op == shortAnd {
+		rw.Operation = ast.OperatorAnd
+	}
+	for iter.Next() {
+		child := c.compileRewrite(nsName, iter.Value(), nesting+1)
+		if child == nil {
+			return nil
+		}
+		rw.Children = append(rw.Children, child)
+	}
+	return rw
+}
+
 func (c *cueCompiler) requiredString(v cue.Value, op, field string) (string, srcRange, bool) {
 	f := v.LookupPath(cue.ParsePath(field))
 	if !f.Exists() {
@@ -443,8 +553,17 @@ func (c *cueCompiler) isUserPos(p token.Pos) bool {
 	return ok
 }
 
+// addErr adds an error. It drops an error with the same message at the same
+// position, for example one that a comprehension makes for each entry.
 func (c *cueCompiler) addErr(at srcRange, format string, a ...any) {
-	c.errors = append(c.errors, c.newError(fmt.Sprintf(format, a...), at))
+	e := c.newError(fmt.Sprintf(format, a...), at)
+	for _, prev := range c.errors {
+		if prev.Message() == e.Message() && prev.Filename() == e.Filename() &&
+			prev.Start() == e.Start() && prev.End() == e.End() {
+			return
+		}
+	}
+	c.errors = append(c.errors, e)
 }
 
 func (c *cueCompiler) newError(msg string, at srcRange) *ParseError {
@@ -469,18 +588,33 @@ func (c *cueCompiler) addCUEErr(err error) {
 	// CUE reports an empty disjunction once as a summary and once per
 	// alternative. The summary becomes one clear message, so drop the
 	// per-alternative conflicts at the same path.
+	// When an error inside the value explains the conflict, for example a
+	// misspelled field of a struct, drop the summary instead.
 	disjunctions := make(map[string]bool)
+	var paths []string
 	for _, e := range errs {
+		path := strings.Join(e.Path(), ".")
+		paths = append(paths, path)
 		if format, _ := e.Msg(); strings.Contains(format, "empty disjunction") {
-			disjunctions[strings.Join(e.Path(), ".")] = true
+			disjunctions[path] = true
 		}
+	}
+	hasInner := func(path string) bool {
+		for _, p := range paths {
+			if strings.HasPrefix(p, path+".") {
+				return true
+			}
+		}
+		return false
 	}
 
 	seen := make(map[string]bool)
 	for _, e := range errs {
 		e = cueerrors.Sanitize(e)
 		format, args := e.Msg()
-		if disjunctions[strings.Join(e.Path(), ".")] && !strings.Contains(format, "empty disjunction") {
+		path := strings.Join(e.Path(), ".")
+		isSummary := strings.Contains(format, "empty disjunction")
+		if disjunctions[path] && (!isSummary || hasInner(path)) {
 			continue
 		}
 		msg := fmt.Sprintf(format, args...)
@@ -548,10 +682,29 @@ func disjunctionMessage(path []string, v cue.Value) string {
 		allowed = `"or", "and", "direct", "tupleToSubjectSet" or "invert"`
 	case len(path) >= 2 && path[len(path)-2] == "types":
 		allowed = `"Namespace", "Namespace#relation" or {namespace: "Namespace", relation?: "relation"}`
+	case len(path) >= 2 && path[len(path)-2] == "relations":
+		allowed = `a list of types or {types?: [...], rewrite?: ...}`
+	case isRewritePath(path):
+		allowed = `"relation", "tupleSetRelation->computedSubjectSet", {or: [...]}, {and: [...]}, {not: ...} or {op: ...}`
 	default:
 		allowed = "a value that the base schema allows"
 	}
 	return fmt.Sprintf("%s: %v is not allowed; use %s", strings.Join(path, "."), v, allowed)
+}
+
+// isRewritePath reports whether a CUE path ends at a rewrite.
+func isRewritePath(path []string) bool {
+	n := len(path)
+	switch {
+	case n >= 1 && (path[n-1] == "rewrite" || path[n-1] == "child" || path[n-1] == shortNot):
+		return true
+	case n >= 2 && path[n-2] == "permissions":
+		return true
+	case n >= 2 && (path[n-2] == "children" || path[n-2] == shortOr || path[n-2] == shortAnd):
+		_, err := strconv.Atoi(path[n-1])
+		return err == nil
+	}
+	return false
 }
 
 // simplifyExpression rewrites the expression to use n-ary set operations

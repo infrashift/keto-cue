@@ -5,5 +5,5 @@ package keto
 
 namespaces: {
 	User: {}
-	Chat: relations: member: types: ["User"]
+	Chat: relations: member: ["User"]
 }
