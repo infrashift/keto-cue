@@ -10,3 +10,6 @@ dist/
 
 # Documentation site (Astro)
 docs/.astro/
+
+# Python bytecode (scripts/ste-check.py)
+__pycache__/
