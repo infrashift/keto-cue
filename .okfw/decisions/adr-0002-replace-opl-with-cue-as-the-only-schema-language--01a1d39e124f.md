@@ -1,5 +1,5 @@
 ---
-id: "01a1d39e-124f-7d4a-a732-a53fee135847"
+x-okfw-id: "01a1d39e-124f-7d4a-a732-a53fee135847"
 title: "ADR-0002: Replace OPL with CUE as the only schema language"
 type: "ADR"
 tags:
@@ -7,8 +7,8 @@ tags:
   - "schema"
   - "cue"
   - "opl"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:35:14-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T00:35:14-06:00"
 description: "keto-cue compiles CUE schemas into the existing Keto AST and removes the OPL lexer and parser."
 ---
 

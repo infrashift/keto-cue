@@ -1,15 +1,15 @@
 ---
-id: "01a1d39e-125f-72e3-9b37-daa1fd7fd3c9"
+x-okfw-id: "01a1d39e-125f-72e3-9b37-daa1fd7fd3c9"
 title: "ISSUE-001: Okfw wiki, MCP server and documentation gates"
 type: "Issue"
-kind: "issue"
+x-okfw-kind: "issue"
 tags:
   - "issue"
   - "phase-0"
   - "process"
   - "closed"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:35:49-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T00:35:49-06:00"
 description: "Set up the okfw wiki, the okfw MCP server, the STE checker and the keto-cue Makefile gates."
 ---
 

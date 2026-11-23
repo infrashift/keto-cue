@@ -1,13 +1,13 @@
 ---
-id: "01a1d39e-1245-71e9-93a4-950a204fdb30"
+x-okfw-id: "01a1d39e-1245-71e9-93a4-950a204fdb30"
 title: "Development workflow"
 type: "Guide"
 tags:
   - "conventions"
   - "workflow"
   - "meta"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:35:14-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T00:35:14-06:00"
 description: "The loop for each keto-cue phase: implement, lint, verify until green, update the wiki, then commit."
 ---
 

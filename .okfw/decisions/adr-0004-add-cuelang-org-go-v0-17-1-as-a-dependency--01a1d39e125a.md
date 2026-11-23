@@ -1,13 +1,13 @@
 ---
-id: "01a1d39e-125a-71ec-90f4-2c5840b312f7"
+x-okfw-id: "01a1d39e-125a-71ec-90f4-2c5840b312f7"
 title: "ADR-0004: Add cuelang.org/go v0.17.1 as a dependency"
 type: "ADR"
 tags:
   - "adr"
   - "dependency"
   - "cue"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:35:14-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T00:35:14-06:00"
 description: "keto-cue pins cuelang.org/go v0.17.1, the latest stable release, to compile CUE schemas."
 ---
 

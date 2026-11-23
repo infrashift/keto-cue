@@ -1,13 +1,13 @@
 ---
-id: "01a1d39e-1284-7285-bd69-bd08266d2727"
+x-okfw-id: "01a1d39e-1284-7285-bd69-bd08266d2727"
 title: "CUE permission schema"
 type: "Spec"
 tags:
   - "spec"
   - "schema"
   - "cue"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:35:14-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T00:35:14-06:00"
 description: "The contract for keto-cue schemas: the base schema, the rewrite operations and their AST mapping."
 ---
 

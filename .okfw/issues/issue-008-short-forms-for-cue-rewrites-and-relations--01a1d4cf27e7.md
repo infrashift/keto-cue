@@ -1,5 +1,5 @@
 ---
-id: "01a1d4cf-27e7-7293-9f50-17d34eadefae"
+x-okfw-id: "01a1d4cf-27e7-7293-9f50-17d34eadefae"
 title: "ISSUE-008: Short forms for CUE rewrites and relations"
 type: "Issue"
 tags:
@@ -8,8 +8,8 @@ tags:
   - "cue"
   - "schema"
   - "closed"
-created: "2026-11-13T06:08:28-06:00"
-timestamp: "2026-11-13T06:15:22-06:00"
+x-okfw-created: "2026-11-13T06:08:28-06:00"
+x-okfw-timestamp: "2026-11-13T06:15:22-06:00"
 description: "Add short forms for rewrites and relation types so that a CUE schema is as short as an OPL schema."
 ---
 
