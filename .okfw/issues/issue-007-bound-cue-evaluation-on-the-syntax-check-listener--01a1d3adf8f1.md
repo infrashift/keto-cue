@@ -1,15 +1,15 @@
 ---
-id: "01a1d3ad-f8f1-7347-a479-c6b41ac6e533"
+x-okfw-id: "01a1d3ad-f8f1-7347-a479-c6b41ac6e533"
 title: "ISSUE-007: Bound CUE evaluation on the syntax-check listener"
 type: "Issue"
-kind: "issue"
+x-okfw-kind: "issue"
 tags:
   - "issue"
   - "phase-3"
   - "security"
   - "closed"
-created: "2026-11-13T00:52:36-06:00"
-timestamp: "2026-11-13T01:29:33-06:00"
+x-okfw-created: "2026-11-13T00:52:36-06:00"
+x-okfw-timestamp: "2026-11-13T01:29:33-06:00"
 description: "CUE evaluation has no time or memory bound, and the syntax-check listener accepts schemas from clients."
 ---
 

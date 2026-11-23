@@ -1,15 +1,15 @@
 ---
-id: "01a1d39e-1279-7455-ba9c-4631d7a1b1a4"
+x-okfw-id: "01a1d39e-1279-7455-ba9c-4631d7a1b1a4"
 title: "ISSUE-006: CUE schema documentation"
 type: "Issue"
-kind: "issue"
+x-okfw-kind: "issue"
 tags:
   - "issue"
   - "phase-5"
   - "docs"
   - "closed"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T01:28:43-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T01:28:43-06:00"
 description: "Document the CUE permission schema and mark the OPL documents as superseded."
 ---
 

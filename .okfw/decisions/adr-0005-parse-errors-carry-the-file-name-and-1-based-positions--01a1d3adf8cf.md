@@ -1,13 +1,13 @@
 ---
-id: "01a1d3ad-f8cf-72b0-9334-2407ef14c6aa"
+x-okfw-id: "01a1d3ad-f8cf-72b0-9334-2407ef14c6aa"
 title: "ADR-0005: Parse errors carry the file name and 1-based positions"
 type: "ADR"
 tags:
   - "adr"
   - "schema"
   - "errors"
-created: "2026-11-13T00:52:36-06:00"
-timestamp: "2026-11-13T00:52:36-06:00"
+x-okfw-created: "2026-11-13T00:52:36-06:00"
+x-okfw-timestamp: "2026-11-13T00:52:36-06:00"
 description: "ParseError holds a file name, the source and 1-based start and end positions, and keeps the ToAPI and ToProto shapes."
 ---
 

@@ -1,13 +1,13 @@
 ---
-id: "01a1d39e-127e-7929-9b97-ee66fb238f9e"
+x-okfw-id: "01a1d39e-127e-7929-9b97-ee66fb238f9e"
 title: "keto-cue architecture overview"
 type: "Architecture"
 tags:
   - "architecture"
   - "schema"
   - "cue"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:35:14-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T00:35:14-06:00"
 description: "How a CUE schema flows from a config location to the AST that the check and expand engines walk."
 ---
 

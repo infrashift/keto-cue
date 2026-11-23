@@ -1,13 +1,13 @@
 ---
-id: "01a1d4cf-57cd-77e3-8231-6d23ca04b2a8"
+x-okfw-id: "01a1d4cf-57cd-77e3-8231-6d23ca04b2a8"
 title: "ADR-0007: Short rewrite forms in the base schema, compiled in Go"
 type: "ADR"
 tags:
   - "adr"
   - "cue"
   - "schema"
-created: "2026-11-13T06:08:40-06:00"
-timestamp: "2026-11-13T06:08:40-06:00"
+x-okfw-created: "2026-11-13T06:08:40-06:00"
+x-okfw-timestamp: "2026-11-13T06:08:40-06:00"
 description: "The base schema accepts short rewrite and relation forms, and the Go compiler converts them to the same AST as the long forms."
 ---
 

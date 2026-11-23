@@ -1,15 +1,15 @@
 ---
-id: "01a1d39e-1269-78d8-900c-9e4d1ed96342"
+x-okfw-id: "01a1d39e-1269-78d8-900c-9e4d1ed96342"
 title: "ISSUE-003: CUE formatter and OPL equivalence gate"
 type: "Issue"
-kind: "issue"
+x-okfw-kind: "issue"
 tags:
   - "issue"
   - "phase-2"
   - "schema"
   - "closed"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:54:38-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T00:54:38-06:00"
 description: "Add FormatCUE and a test that proves each OPL fixture and its CUE port give the same AST."
 ---
 

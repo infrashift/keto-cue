@@ -1,5 +1,5 @@
 ---
-id: "01a1d4da-03a0-7ba9-94a8-08b2a3f8f116"
+x-okfw-id: "01a1d4da-03a0-7ba9-94a8-08b2a3f8f116"
 title: "ISSUE-009: Documentation site on GitHub Pages"
 type: "Issue"
 tags:
@@ -8,8 +8,8 @@ tags:
   - "docs"
   - "site"
   - "closed"
-created: "2026-11-13T06:20:20-06:00"
-timestamp: "2026-11-13T06:29:52-06:00"
+x-okfw-created: "2026-11-13T06:20:20-06:00"
+x-okfw-timestamp: "2026-11-13T06:29:52-06:00"
 description: "Publish the keto-cue documentation as an Astro Starlight site on GitHub Pages, with the zmake setup."
 ---
 

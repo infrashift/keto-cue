@@ -1,5 +1,7 @@
 ---
-okf_version: "0.2"
+okf_version: "0.3"
+description: "Design record for keto-cue, the Ory Keto fork that replaces OPL with CUE permission schemas: ADRs, the CUE schema spec, an architecture overview and the migration issues."
+title: "keto-cue"
 ---
 
 # /

@@ -1,5 +1,5 @@
 ---
-id: "01a1d39e-1254-7da9-b51f-398ee2cab6b5"
+x-okfw-id: "01a1d39e-1254-7da9-b51f-398ee2cab6b5"
 title: "ADR-0003: Build CUE instances in memory without cue/load or a module registry"
 type: "ADR"
 tags:
@@ -7,8 +7,8 @@ tags:
   - "schema"
   - "cue"
   - "security"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:35:14-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T00:35:14-06:00"
 description: "The schema compiler builds one CUE instance from source bytes and allows only standard-library imports."
 ---
 

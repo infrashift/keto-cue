@@ -1,15 +1,15 @@
 ---
-id: "01a1d39e-1273-7d3e-923c-390525be1f0f"
+x-okfw-id: "01a1d39e-1273-7d3e-923c-390525be1f0f"
 title: "ISSUE-005: Migrate the fixtures and remove OPL"
 type: "Issue"
-kind: "issue"
+x-okfw-kind: "issue"
 tags:
   - "issue"
   - "phase-4"
   - "schema"
   - "closed"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T01:26:34-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T01:26:34-06:00"
 description: "Convert the OPL fixtures and examples to CUE, delete the OPL code and add the CUE validate command."
 ---
 

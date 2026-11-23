@@ -1,15 +1,15 @@
 ---
-id: "01a1d39e-1264-763f-bae5-03cf3ec5dd7d"
+x-okfw-id: "01a1d39e-1264-763f-bae5-03cf3ec5dd7d"
 title: "ISSUE-002: CUE compiler next to the OPL parser"
 type: "Issue"
-kind: "issue"
+x-okfw-kind: "issue"
 tags:
   - "issue"
   - "phase-1"
   - "schema"
   - "closed"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T00:52:50-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T00:52:50-06:00"
 description: "Add the base schema, the CUE-to-AST compiler, the semantic checks and the new ParseError shape."
 ---
 

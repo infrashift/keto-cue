@@ -1,13 +1,13 @@
 ---
-id: "01a1d4da-03c6-7ab0-a2a9-e1ada141bcaa"
+x-okfw-id: "01a1d4da-03c6-7ab0-a2a9-e1ada141bcaa"
 title: "ADR-0008: Document keto-cue with Astro Starlight on GitHub Pages"
 type: "ADR"
 tags:
   - "adr"
   - "docs"
   - "site"
-created: "2026-11-13T06:20:20-06:00"
-timestamp: "2026-11-13T06:20:20-06:00"
+x-okfw-created: "2026-11-13T06:20:20-06:00"
+x-okfw-timestamp: "2026-11-13T06:20:20-06:00"
 description: "The keto-cue documentation is an Astro Starlight site in docs/, built with bun and deployed to GitHub Pages by GitHub Actions."
 ---
 

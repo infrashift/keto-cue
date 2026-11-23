@@ -1,15 +1,15 @@
 ---
-id: "01a1d39e-126e-7a94-9d61-e28b476c0008"
+x-okfw-id: "01a1d39e-126e-7a94-9d61-e28b476c0008"
 title: "ISSUE-004: Load CUE schemas in the server and the tests"
 type: "Issue"
-kind: "issue"
+x-okfw-kind: "issue"
 tags:
   - "issue"
   - "phase-3"
   - "config"
   - "closed"
-created: "2026-11-13T00:35:14-06:00"
-timestamp: "2026-11-13T01:21:52-06:00"
+x-okfw-created: "2026-11-13T00:35:14-06:00"
+x-okfw-timestamp: "2026-11-13T01:21:52-06:00"
 description: "Route schema.Parse, the watcher, the syntax-check handler and the test helpers through the CUE compiler."
 ---
 

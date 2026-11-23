@@ -1,13 +1,13 @@
 ---
-id: "01a1d3cd-0fe7-7d7d-b38e-fb3f096ffc74"
+x-okfw-id: "01a1d3cd-0fe7-7d7d-b38e-fb3f096ffc74"
 title: "ADR-0006: keto namespace validate checks CUE schemas"
 type: "ADR"
 tags:
   - "adr"
   - "cli"
   - "cue"
-created: "2026-11-13T01:26:33-06:00"
-timestamp: "2026-11-13T01:26:33-06:00"
+x-okfw-created: "2026-11-13T01:26:33-06:00"
+x-okfw-timestamp: "2026-11-13T01:26:33-06:00"
 description: "keto namespace validate checks CUE files and directories, and the legacy validator keeps only the validate-legacy name."
 ---
 
